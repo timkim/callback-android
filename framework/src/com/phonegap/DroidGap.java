@@ -39,6 +39,7 @@ import android.util.Log;
 import android.view.Display;
 import android.view.KeyEvent;
 import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
@@ -205,6 +206,9 @@ public class DroidGap extends PhonegapActivity {
     // If true, then the JavaScript and native code continue to run in the background
     // when another application (activity) is started.
     protected boolean keepRunning = true;
+
+	private int dMenuSize;
+	private Menu dMenu;
 
     /** 
      * Called when the activity is first created. 
