@@ -11,6 +11,8 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import android.content.Intent;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.webkit.WebView;
 
 /**
@@ -62,6 +64,17 @@ public abstract class Plugin implements IPlugin {
 	 */
 	public void setView(WebView webView) {
 		this.webView = webView;
+	}
+	
+    /**
+	* Call to build the menu
+	*
+	* @param menu
+	* @return
+	*/
+	public boolean buildMenu(Menu menu)
+	{
+	      return true;
 	}
 	
     /**
@@ -176,5 +189,20 @@ public abstract class Plugin implements IPlugin {
      */
     public void error(String message, String callbackId) {
     	this.ctx.sendJavascript(new PluginResult(PluginResult.Status.ERROR, message).toErrorCallbackString(callbackId));
+    }
+    
+    public boolean onMenuItemSelected(MenuItem item) {
+        // TODO Auto-generated method stub
+        return true;
+    }
+
+    public boolean isMenuChanged() {
+        // TODO Auto-generated method stub
+        return false;
+    }
+
+    public boolean onItemSelect(MenuItem item) {
+        // TODO Auto-generated method stub
+        return false;
     }
 }
