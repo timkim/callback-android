@@ -207,8 +207,8 @@ public class DroidGap extends PhonegapActivity {
     // when another application (activity) is started.
     protected boolean keepRunning = true;
 
-	private int dMenuSize;
 	private Menu dMenu;
+    public int dMenuSize;
 
     /** 
      * Called when the activity is first created. 
