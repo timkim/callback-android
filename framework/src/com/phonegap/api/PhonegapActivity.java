@@ -9,6 +9,7 @@ package com.phonegap.api;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.view.Menu;
 
 /**
  * The Phonegap activity abstract class that is extended by DroidGap.
@@ -16,6 +17,7 @@ import android.content.Intent;
  */
 public abstract class PhonegapActivity extends Activity {
 
+    public Menu dMenu;
     /**
      * Add a class that implements a service.
      * 
