@@ -9,6 +9,11 @@ package com.phonegap;
 
 import java.util.HashMap;
 import java.util.Map.Entry;
+import java.util.ArrayList;
+import java.util.regex.Pattern;
+import java.util.regex.Matcher;
+import java.util.Iterator;
+import java.io.IOException;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -23,6 +28,7 @@ import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.PackageManager.NameNotFoundException;
 import android.content.res.Configuration;
+import android.content.res.XmlResourceParser;
 import android.graphics.Color;
 import android.graphics.Rect;
 import android.media.AudioManager;
@@ -54,6 +60,7 @@ import android.widget.LinearLayout;
 import com.phonegap.api.PhonegapActivity;
 import com.phonegap.api.IPlugin;
 import com.phonegap.api.PluginManager;
+import 	org.xmlpull.v1.XmlPullParserException;
 
 /**
  * This class is the main Android activity that represents the PhoneGap
@@ -126,6 +133,8 @@ public class DroidGap extends PhonegapActivity {
     // The webview for our app
     protected WebView appView;
     protected WebViewClient webViewClient;
+    private ArrayList<Pattern> whiteList = new ArrayList<Pattern>();
+    private HashMap<String, Boolean> whiteListCache = new HashMap<String,Boolean>();
 
     protected LinearLayout root;
     public boolean bound = false;
@@ -138,6 +147,7 @@ public class DroidGap extends PhonegapActivity {
     // The initial URL for our app
     // ie http://server/path/index.html#abc?query
     private String url;
+    private boolean firstPage = true;
     
     // The base of the initial URL for our app.
     // Does not include file name.  Ends with /
@@ -200,13 +210,18 @@ public class DroidGap extends PhonegapActivity {
         root.setBackgroundColor(this.backgroundColor);
         root.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.FILL_PARENT, 
                 ViewGroup.LayoutParams.FILL_PARENT, 0.0F));
+        
+        // Load white list of allowed URLs
+        this.loadWhiteList();
 
         // If url was passed in to intent, then init webview, which will load the url
+        this.firstPage = true;
         Bundle bundle = this.getIntent().getExtras();
         if (bundle != null) {
             String url = bundle.getString("url");
             if (url != null) {
-                this.init();
+            	this.url = url;
+            	this.firstPage = false;
             }
         }
         // Setup the hardware volume controls to handle volume control
@@ -253,8 +268,9 @@ public class DroidGap extends PhonegapActivity {
         // Enable built-in geolocation
         WebViewReflect.setGeolocationEnabled(settings, true);
 
-        // Bind PhoneGap objects to JavaScript
-        this.bindBrowser(this.appView);
+        // Create callback server and plugin manager
+        this.callbackServer = new CallbackServer();
+        this.pluginManager = new PluginManager(this.appView, this);        
 
         // Add web view but make it invisible while loading URL
         this.appView.setVisibility(View.INVISIBLE);
@@ -264,12 +280,6 @@ public class DroidGap extends PhonegapActivity {
         // Clear cancel flag
         this.cancelLoadUrl = false;
 
-        // If url specified, then load it
-        String url = this.getStringProperty("url", null);
-        if (url != null) {
-            System.out.println("Loading initial URL="+url);
-            this.loadUrl(url);
-        }
     }
     
     /**
@@ -283,17 +293,6 @@ public class DroidGap extends PhonegapActivity {
         appView.setWebViewClient(client);
     }
 
-    /**
-     * Bind PhoneGap objects to JavaScript.
-     * 
-     * @param appView
-     */
-    private void bindBrowser(WebView appView) {
-        this.callbackServer = new CallbackServer();
-        this.pluginManager = new PluginManager(appView, this);
-
-    }
-        
     /**
      * Look at activity parameters and process them.
      * This must be called from the main UI thread.
@@ -311,7 +310,7 @@ public class DroidGap extends PhonegapActivity {
 
         // If spashscreen
         this.splashscreen = this.getIntegerProperty("splashscreen", 0);
-        if (this.splashscreen != 0) {
+        if (this.firstPage && (this.splashscreen != 0)) {
             root.setBackgroundResource(this.splashscreen);
         }
 
@@ -333,7 +332,24 @@ public class DroidGap extends PhonegapActivity {
      * 
      * @param url
      */
-    public void loadUrl(final String url) {
+    public void loadUrl(String url) {
+    	
+    	// If first page of app, then set URL to load to be the one passed in
+    	if (this.firstPage) {
+    		this.loadUrlIntoView(url);
+    	}
+    	// Otherwise use the URL specified in the activity's extras bundle
+    	else {
+    		this.loadUrlIntoView(this.url);
+    	}
+    }
+    
+    /**
+     * Load the url into the webview.
+     * 
+     * @param url
+     */
+    private void loadUrlIntoView(final String url) {
         System.out.println("loadUrl("+url+")");
         this.url = url;
         if (this.baseUrl == null) {
@@ -358,8 +374,14 @@ public class DroidGap extends PhonegapActivity {
                 // Initialize callback server
                 me.callbackServer.init(url);
 
-                // If loadingDialog, then show the App loading dialog
-                String loading = me.getStringProperty("loadingDialog", null);
+                // If loadingDialog property, then show the App loading dialog for first page of app
+                String loading = null;
+                if (me.firstPage) {
+                	loading = me.getStringProperty("loadingDialog", null);
+                }
+                else {
+                	loading = me.getStringProperty("loadingPageDialog", null);                	
+                }
                 if (loading != null) {
 
                     String title = "";
@@ -412,7 +434,32 @@ public class DroidGap extends PhonegapActivity {
      * @param url
      * @param time              The number of ms to wait before loading webview
      */
-    public void loadUrl(final String url, final int time) {
+    public void loadUrl(final String url, int time) {
+    	
+    	// If first page of app, then set URL to load to be the one passed in
+    	if (this.firstPage) {
+    		this.loadUrlIntoView(url, time);
+    	}
+    	// Otherwise use the URL specified in the activity's extras bundle
+    	else {
+    		this.loadUrlIntoView(this.url);
+    	}
+    }
+
+    /**
+     * Load the url into the webview after waiting for period of time.
+     * This is used to display the splashscreen for certain amount of time.
+     * 
+     * @param url
+     * @param time              The number of ms to wait before loading webview
+     */
+    private void loadUrlIntoView(final String url, final int time) {
+    	
+    	// If not first page of app, then load immediately
+    	if (!this.firstPage) {
+    		this.loadUrl(url);
+    	}
+        
         System.out.println("loadUrl("+url+","+time+")");
         final DroidGap me = this;
 
@@ -887,7 +934,7 @@ public class DroidGap extends PhonegapActivity {
             // Security check to make sure any requests are coming from the page initially
             // loaded in webview and not another loaded in an iframe.
             boolean reqOk = false;
-            if (url.indexOf(this.ctx.baseUrl) == 0) {
+            if (url.indexOf(this.ctx.baseUrl) == 0 || isUrlWhiteListed(url)) {
                 reqOk = true;
             }
             
@@ -1124,26 +1171,10 @@ public class DroidGap extends PhonegapActivity {
 
                 // If our app or file:, then load into a new phonegap webview container by starting a new instance of our activity.
                 // Our app continues to run.  When BACK is pressed, our app is redisplayed.
-                if (this.ctx.loadInWebView || url.startsWith("file://") || url.indexOf(this.ctx.baseUrl) == 0) {
+                if (this.ctx.loadInWebView || url.startsWith("file://") || url.indexOf(this.ctx.baseUrl) == 0 || isUrlWhiteListed(url)) {
                     try {
                         // Init parameters to new DroidGap activity and propagate existing parameters
                         HashMap<String, Object> params = new HashMap<String, Object>();
-                        String loadingPage = this.ctx.getStringProperty("loadingPageDialog", null);
-                        if (loadingPage != null) {
-                            params.put("loadingDialog", loadingPage);
-                            params.put("loadingPageDialog", loadingPage);
-                        }
-                        if (this.ctx.loadInWebView) {
-                            params.put("loadInWebView", true);
-                        }
-                        params.put("keepRunning", this.ctx.keepRunning);
-                        params.put("loadUrlTimeoutValue", this.ctx.loadUrlTimeoutValue);
-                        String errorUrl = this.ctx.getStringProperty("errorUrl", null);
-                        if (errorUrl != null) {
-                            params.put("errorUrl", errorUrl);
-                        }
-                        params.put("backgroundColor", this.ctx.backgroundColor);
-
                         this.ctx.showWebPage(url, true, false, params);
                     } catch (android.content.ActivityNotFoundException e) {
                         System.out.println("Error loading url into DroidGap - "+url+":"+ e.toString());
@@ -1553,4 +1584,83 @@ public class DroidGap extends PhonegapActivity {
                 oldWidth = width;
             }
     }
+     
+    /**
+     * Load approved list of URLs that can be loaded into DroidGap.
+     * This list is loaded from res/xml/phonegap.xml
+     * 		<access origin="http://server regexp" subdomains="true" />
+     */
+    private void loadWhiteList() {
+        int id = getResources().getIdentifier("phonegap", "xml", getPackageName());
+        if (id == 0) {
+            Log.i("PhoneGapLog", "phonegap.xml missing. Ignoring...");
+            return;
+        }
+        XmlResourceParser xml = getResources().getXml(id);
+        int eventType = -1;
+        while (eventType != XmlResourceParser.END_DOCUMENT) {
+            if (eventType == XmlResourceParser.START_TAG) {
+                String strNode = xml.getName();
+                if (strNode.equals("access")) {
+                    String origin = xml.getAttributeValue(null, "origin");
+                    String subdomains = xml.getAttributeValue(null, "subdomains");
+                    if (origin != null) {
+                        this.addWhiteListEntry(origin, (subdomains != null) && (subdomains.compareToIgnoreCase("true") == 0));
+                    }
+                }
+            }
+            try {
+                eventType = xml.next();
+            } catch (XmlPullParserException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    /**
+     * Add entry to approved list of URLs (whitelist)
+     * 
+     * @param origin        URL regular expression to allow
+     * @param subdomains    T=include all subdomains under origin
+     */
+    public void addWhiteListEntry(String origin, boolean subdomains) {
+        if (subdomains) {
+            Log.d("PhoneGapLog", "Origin to allow with subdomains: "+origin);
+            whiteList.add(Pattern.compile(origin.replaceFirst("https{0,1}://", "^https{0,1}://.*")));
+        } else {
+            Log.d("PhoneGapLog", "Origin to allow: "+origin);
+            whiteList.add(Pattern.compile(origin.replaceFirst("https{0,1}://", "^https{0,1}://")));
+        }    
+    }
+
+    /**
+     * Determine if URL is in approved list of URLs to load.
+     * 
+     * @param url
+     * @return
+     */
+    private boolean isUrlWhiteListed(String url) {
+
+        // Check to see if we have matched url previously
+        if (whiteListCache.get(url) != null) {
+            return true;
+        }
+
+        // Look for match in white list
+        Iterator<Pattern> pit = whiteList.iterator();
+        while (pit.hasNext()) {
+            Pattern p = pit.next();
+            Matcher m = p.matcher(url);
+
+            // If match found, then cache it to speed up subsequent comparisons
+            if (m.find()) {
+                whiteListCache.put(url, true);
+                return true;
+            }
+        }
+        return false;
+    }
+
 }
