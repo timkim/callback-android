@@ -32,6 +32,8 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.Display;
 import android.view.KeyEvent;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
@@ -172,6 +174,9 @@ public class DroidGap extends PhonegapActivity {
     // If true, then the JavaScript and native code continue to run in the background
     // when another application (activity) is started.
     protected boolean keepRunning = true;
+    
+    public int dMenuSize;
+
 
     /** 
      * Called when the activity is first created. 
@@ -1256,6 +1261,43 @@ public class DroidGap extends PhonegapActivity {
         }
     }
     
+    /*
+    * Hook in DroidGap for Plugins that build menus
+    * @see android.app.Activity#onCreateOptionsMenu(android.view.Menu)
+    */
+        
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu)
+    {
+         dMenu = menu;
+         dMenuSize = dMenu.size();
+         boolean result = pluginManager.onMenuCreate(menu);
+         if(result)
+             return result;
+         else
+         {
+             return super.onCreateOptionsMenu(menu);
+         }
+    }
+        
+    @Override
+    public boolean onPrepareOptionsMenu(Menu menu)
+    {
+         if(pluginManager.checkMenuRefresh())
+         {
+             menu.clear();
+             pluginManager.onMenuCreate(menu);
+         }
+         return super.onPrepareOptionsMenu(menu);
+    }
+        
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item)
+    {
+         pluginManager.onMenuItemSelected(item);
+         return true;
+    }
+    
     /**
      * Called when a key is pressed.
      * 
@@ -1293,11 +1335,13 @@ public class DroidGap extends PhonegapActivity {
             }
         }
 
-        // If menu key
-        else if (keyCode == KeyEvent.KEYCODE_MENU) {
-            this.appView.loadUrl("javascript:PhoneGap.fireDocumentEvent('menubutton');");
-            return true;
-        }
+    	// If menu key
+    	else if (keyCode == KeyEvent.KEYCODE_MENU) {
+    		this.appView.loadUrl("javascript:PhoneGap.fireEvent('menubutton');");
+    		//Keep going!
+    		return super.onKeyDown(keyCode, event);
+    	}
+
 
         // If search key
         else if (keyCode == KeyEvent.KEYCODE_SEARCH) {

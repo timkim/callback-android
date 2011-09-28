@@ -18,7 +18,10 @@ import org.xmlpull.v1.XmlPullParserException;
 
 import android.content.Intent;
 import android.content.res.XmlResourceParser;
+
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.webkit.WebView;
 
 /**
@@ -34,6 +37,7 @@ public final class PluginManager {
 	
 	private final PhonegapActivity ctx;
 	private final WebView app;
+    private Plugin menuPlugin;
 	
     // Map URL schemes like foo: to plugins that want to handle those schemes
     // This would allow how all URLs are handled to be offloaded to a plugin
@@ -217,6 +221,10 @@ public final class PluginManager {
 				this.plugins.put(className, plugin);
 				plugin.setContext(this.ctx);
 				plugin.setView(this.app);
+				if(className.equals("com.phonegap.menu.AppMenu"))
+	              {
+	                this.menuPlugin = (Plugin) plugin;
+	              }
 				return plugin;
 			}
     	} catch (Exception e) {
@@ -333,4 +341,49 @@ public final class PluginManager {
 		System.err.println("https://raw.github.com/phonegap/phonegap-android/master/framework/res/xml/plugins.xml");        
 		System.err.println("=====================================================================================");
 	}
+    
+    /**
+    * Menu options code
+    */
+    public boolean onMenuCreate(Menu menu) {
+        // This should never fail
+        if(this.menuPlugin != null)
+        {
+            return menuPlugin.buildMenu(menu);
+        }
+        else
+        {
+            return false;
+        }
+    }
+        
+    public boolean onMenuItemSelect(MenuItem item)
+    {
+        if(menuPlugin != null)
+        {
+            return menuPlugin.onItemSelect(item);
+        }
+        else
+            return true;
+    }
+
+
+    public boolean checkMenuRefresh() {
+        if(menuPlugin != null)
+        {
+          return menuPlugin.isMenuChanged();
+        }
+        return false;
+    }
+
+
+      public boolean onMenuItemSelected(MenuItem item) {
+        if(menuPlugin != null)
+        {
+          return menuPlugin.onMenuItemSelected(item);
+        }
+        else
+          return true;
+      }
+    
 }
