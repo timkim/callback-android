@@ -61,7 +61,7 @@ import com.phonegap.api.LOG;
 import com.phonegap.api.PhonegapActivity;
 import com.phonegap.api.IPlugin;
 import com.phonegap.api.PluginManager;
-import 	org.xmlpull.v1.XmlPullParserException;
+import  org.xmlpull.v1.XmlPullParserException;
 
 /**
  * This class is the main Android activity that represents the PhoneGap
@@ -206,8 +206,11 @@ public class DroidGap extends PhonegapActivity {
     // If true, then the JavaScript and native code continue to run in the background
     // when another application (activity) is started.
     protected boolean keepRunning = true;
+    
+    public int dMenuSize;
 
-	private Menu dMenu;
+
+  private Menu dMenu;
     public int dMenuSize;
 
     /** 
@@ -245,8 +248,8 @@ public class DroidGap extends PhonegapActivity {
         if (bundle != null) {
             String url = bundle.getString("url");
             if (url != null) {
-            	this.url = url;
-            	this.firstPage = false;
+              this.url = url;
+              this.firstPage = false;
             }
         }
         // Setup the hardware volume controls to handle volume control
@@ -359,15 +362,15 @@ public class DroidGap extends PhonegapActivity {
      * @param url
      */
     public void loadUrl(String url) {
-    	
-    	// If first page of app, then set URL to load to be the one passed in
-    	if (this.firstPage) {
-    		this.loadUrlIntoView(url);
-    	}
-    	// Otherwise use the URL specified in the activity's extras bundle
-    	else {
-    		this.loadUrlIntoView(this.url);
-    	}
+      
+      // If first page of app, then set URL to load to be the one passed in
+      if (this.firstPage) {
+        this.loadUrlIntoView(url);
+      }
+      // Otherwise use the URL specified in the activity's extras bundle
+      else {
+        this.loadUrlIntoView(this.url);
+      }
     }
     
     /**
@@ -408,10 +411,10 @@ public class DroidGap extends PhonegapActivity {
                 // If loadingDialog property, then show the App loading dialog for first page of app
                 String loading = null;
                 if (me.firstPage) {
-                	loading = me.getStringProperty("loadingDialog", null);
+                  loading = me.getStringProperty("loadingDialog", null);
                 }
                 else {
-                	loading = me.getStringProperty("loadingPageDialog", null);                	
+                  loading = me.getStringProperty("loadingPageDialog", null);                  
                 }
                 if (loading != null) {
 
@@ -466,15 +469,15 @@ public class DroidGap extends PhonegapActivity {
      * @param time              The number of ms to wait before loading webview
      */
     public void loadUrl(final String url, int time) {
-    	
-    	// If first page of app, then set URL to load to be the one passed in
-    	if (this.firstPage) {
-    		this.loadUrlIntoView(url, time);
-    	}
-    	// Otherwise use the URL specified in the activity's extras bundle
-    	else {
-    		this.loadUrlIntoView(this.url);
-    	}
+      
+      // If first page of app, then set URL to load to be the one passed in
+      if (this.firstPage) {
+        this.loadUrlIntoView(url, time);
+      }
+      // Otherwise use the URL specified in the activity's extras bundle
+      else {
+        this.loadUrlIntoView(this.url);
+      }
     }
 
     /**
@@ -485,14 +488,14 @@ public class DroidGap extends PhonegapActivity {
      * @param time              The number of ms to wait before loading webview
      */
     private void loadUrlIntoView(final String url, final int time) {
-    	
-    	// If not first page of app, then load immediately
-    	if (!this.firstPage) {
-    		this.loadUrl(url);
-    	}
+      
+      // If not first page of app, then load immediately
+      if (!this.firstPage) {
+        this.loadUrl(url);
+      }
         
-    	if (!url.startsWith("javascript:")) {
-    	    LOG.d(TAG, "DroidGap.loadUrl(%s, %d)", url, time);
+      if (!url.startsWith("javascript:")) {
+          LOG.d(TAG, "DroidGap.loadUrl(%s, %d)", url, time);
         }
         final DroidGap me = this;
 
@@ -950,23 +953,23 @@ public class DroidGap extends PhonegapActivity {
                     }
                 });
             dlg.setOnCancelListener(
-            	new DialogInterface.OnCancelListener() {												
-					public void onCancel(DialogInterface dialog) {
-						result.cancel();
-					}
-				});
+              new DialogInterface.OnCancelListener() {                        
+          public void onCancel(DialogInterface dialog) {
+            result.cancel();
+          }
+        });
             dlg.setOnKeyListener(new DialogInterface.OnKeyListener() {
-            	//DO NOTHING
-				public boolean onKey(DialogInterface dialog, int keyCode, KeyEvent event) {
-					if(keyCode == KeyEvent.KEYCODE_BACK)
-					{
-						result.cancel();
-						return false;
-					}
-					else
-						return true;
-				}
-			});
+              //DO NOTHING
+        public boolean onKey(DialogInterface dialog, int keyCode, KeyEvent event) {
+          if(keyCode == KeyEvent.KEYCODE_BACK)
+          {
+            result.cancel();
+            return false;
+          }
+          else
+            return true;
+        }
+      });
             dlg.create();
             dlg.show();
             return true;
@@ -1386,6 +1389,7 @@ public class DroidGap extends PhonegapActivity {
          return true;
     }
     
+    
     /**
      * End this activity by simulating backbutton keypress
      */
@@ -1430,13 +1434,12 @@ public class DroidGap extends PhonegapActivity {
             }
         }
 
-   	// If menu key
-    	else if (keyCode == KeyEvent.KEYCODE_MENU) {
-    		this.appView.loadUrl("javascript:PhoneGap.fireDocumentEvent('menubutton');");
-    		//Keep going!
-    		return super.onKeyDown(keyCode, event);
-    	}
-
+    // If menu key
+      else if (keyCode == KeyEvent.KEYCODE_MENU) {
+        this.appView.loadUrl("javascript:PhoneGap.fireDocumentEvent('menubutton');");
+        //Keep going!
+        return super.onKeyDown(keyCode, event);
+      }
         // If search key
         else if (keyCode == KeyEvent.KEYCODE_SEARCH) {
             this.appView.loadUrl("javascript:PhoneGap.fireDocumentEvent('searchbutton');");
@@ -1661,7 +1664,7 @@ public class DroidGap extends PhonegapActivity {
     /**
      * Load PhoneGap configuration from res/xml/phonegap.xml.
      * Approved list of URLs that can be loaded into DroidGap
-     * 		<access origin="http://server regexp" subdomains="true" />
+     *    <access origin="http://server regexp" subdomains="true" />
      * Log level: ERROR, WARN, INFO, DEBUG, VERBOSE (default=ERROR)
      *      <log level="DEBUG" />
      */
