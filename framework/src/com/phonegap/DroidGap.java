@@ -1432,7 +1432,7 @@ public class DroidGap extends PhonegapActivity {
 
    	// If menu key
     	else if (keyCode == KeyEvent.KEYCODE_MENU) {
-    		this.appView.loadUrl("javascript:PhoneGap.fireEvent('menubutton');");
+    		this.appView.loadUrl("javascript:PhoneGap.fireDocumentEvent('menubutton');");
     		//Keep going!
     		return super.onKeyDown(keyCode, event);
     	}
