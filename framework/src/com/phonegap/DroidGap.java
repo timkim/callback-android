@@ -1068,6 +1068,13 @@ public class DroidGap extends PhonegapActivity {
             callback.invoke(origin, true, false);
         }
 
+		@Override
+		/**
+		 * Tell the client that the selection has been initiated.
+		 */
+		public void onSelectionStart(WebView view) {
+			// Parent class aborts the selection, which seems like a terrible default.
+		}
     }
 
     /**
