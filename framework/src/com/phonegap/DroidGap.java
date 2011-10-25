@@ -1074,6 +1074,7 @@ public class DroidGap extends PhonegapActivity {
 		 */
 		public void onSelectionStart(WebView view) {
 			// Parent class aborts the selection, which seems like a terrible default.
+			Log.i("DroidGap", "onSelectionStart called");
 		}
     }
 
