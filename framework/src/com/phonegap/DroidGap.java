@@ -1179,7 +1179,7 @@ public class DroidGap extends PhonegapActivity {
             callback.invoke(origin, true, false);
         }
 
-		@Override
+		//@Override
 		/**
 		 * Tell the client that the selection has been initiated.
 		 */
