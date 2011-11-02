@@ -10,6 +10,7 @@ package com.phonegap;
 import java.util.HashMap;
 import java.util.Map.Entry;
 import java.util.ArrayList;
+import java.util.Stack;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
 import java.util.Iterator;
@@ -29,6 +30,7 @@ import android.content.pm.PackageManager;
 import android.content.pm.PackageManager.NameNotFoundException;
 import android.content.res.Configuration;
 import android.content.res.XmlResourceParser;
+import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.Rect;
 import android.media.AudioManager;
@@ -44,6 +46,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
+import android.webkit.ConsoleMessage;
 import android.webkit.GeolocationPermissions.Callback;
 import android.webkit.JsPromptResult;
 import android.webkit.JsResult;
@@ -106,10 +109,6 @@ import  org.xmlpull.v1.XmlPullParserException;
  *      // (String - default=null)
  *      super.setStringProperty("loadingPageDialog", "Loading page...");
  *  
- *      // Cause all links on web page to be loaded into existing web view, 
- *      // instead of being loaded into new browser. (Boolean - default=false)
- *      super.setBooleanProperty("loadInWebView", true);
- * 
  *      // Load a splash screen image from the resource drawable directory.
  *      // (Integer - default=0)
  *      super.setIntegerProperty("splashscreen", R.drawable.splash);
@@ -162,13 +161,20 @@ public class DroidGap extends PhonegapActivity {
     public CallbackServer callbackServer;
     protected PluginManager pluginManager;
     protected boolean cancelLoadUrl = false;
-    protected boolean clearHistory = false;
     protected ProgressDialog spinnerDialog = null;
 
     // The initial URL for our app
     // ie http://server/path/index.html#abc?query
-    private String url;
-    private boolean firstPage = true;
+    private String url = null;
+    private Stack<String> urls = new Stack<String>();
+    
+    // Url was specified from extras (activity was started programmatically)
+    private String initUrl = null;
+    
+    private static int ACTIVITY_STARTING = 0;
+    private static int ACTIVITY_RUNNING = 1;
+    private static int ACTIVITY_EXITING = 2;
+    private int activityState = 0;  // 0=starting, 1=running (after 1st resume), 2=shutting down
     
     // The base of the initial URL for our app.
     // Does not include file name.  Ends with /
@@ -178,7 +184,6 @@ public class DroidGap extends PhonegapActivity {
     // Plugin to call when activity result is received
     protected IPlugin activityResultCallback = null;
     protected boolean activityResultKeepRunning;
-    private static int PG_REQUEST_CODE = 99;
 
     // Flag indicates that a loadUrl timeout occurred
     private int loadUrlTimeout = 0;
@@ -190,10 +195,6 @@ public class DroidGap extends PhonegapActivity {
     /*
      * The variables below are used to cache some of the activity properties.
      */
-
-    // Flag indicates that a URL navigated to from PhoneGap app should be loaded into same webview
-    // instead of being loaded into the web browser.  
-    protected boolean loadInWebView = false;
 
     // Draw a splash screen using an image located in the drawable resource directory.
     // This is not the same as calling super.loadSplashscreen(url)
@@ -242,13 +243,11 @@ public class DroidGap extends PhonegapActivity {
         this.loadConfiguration();
 
         // If url was passed in to intent, then init webview, which will load the url
-        this.firstPage = true;
         Bundle bundle = this.getIntent().getExtras();
         if (bundle != null) {
             String url = bundle.getString("url");
             if (url != null) {
-              this.url = url;
-              this.firstPage = false;
+               this.initUrl = url;
             }
         }
         // Setup the hardware volume controls to handle volume control
@@ -284,6 +283,9 @@ public class DroidGap extends PhonegapActivity {
         settings.setJavaScriptEnabled(true);
         settings.setJavaScriptCanOpenWindowsAutomatically(true);
         settings.setLayoutAlgorithm(LayoutAlgorithm.NORMAL);
+        
+        //Set the nav dump for HTC
+        settings.setNavDump(true);
 
         // Enable database
         settings.setDatabaseEnabled(true);
@@ -295,10 +297,6 @@ public class DroidGap extends PhonegapActivity {
         
         // Enable built-in geolocation
         WebViewReflect.setGeolocationEnabled(settings, true);
-
-        // Create callback server and plugin manager
-        this.callbackServer = new CallbackServer();
-        this.pluginManager = new PluginManager(this.appView, this);        
 
         // Add web view but make it invisible while loading URL
         this.appView.setVisibility(View.INVISIBLE);
@@ -327,23 +325,15 @@ public class DroidGap extends PhonegapActivity {
      */
     private void handleActivityParameters() {
 
-        // Init web view if not already done
-        if (this.appView == null) {
-            this.init();
-        }
-
         // If backgroundColor
         this.backgroundColor = this.getIntegerProperty("backgroundColor", Color.BLACK);
         this.root.setBackgroundColor(this.backgroundColor);
 
         // If spashscreen
         this.splashscreen = this.getIntegerProperty("splashscreen", 0);
-        if (this.firstPage && (this.splashscreen != 0)) {
+        if ((this.urls.size() == 0) && (this.splashscreen != 0)) {
             root.setBackgroundResource(this.splashscreen);
         }
-
-        // If loadInWebView
-        this.loadInWebView = this.getBooleanProperty("loadInWebView", false);
 
         // If loadUrlTimeoutValue
         int timeout = this.getIntegerProperty("loadUrlTimeoutValue", 0);
@@ -361,14 +351,14 @@ public class DroidGap extends PhonegapActivity {
      * @param url
      */
     public void loadUrl(String url) {
-      
+    
       // If first page of app, then set URL to load to be the one passed in
-      if (this.firstPage) {
+      if (this.initUrl == null || (this.urls.size() > 0)) {
         this.loadUrlIntoView(url);
       }
       // Otherwise use the URL specified in the activity's extras bundle
       else {
-        this.loadUrlIntoView(this.url);
+        this.loadUrlIntoView(this.initUrl);
       }
     }
     
@@ -380,6 +370,11 @@ public class DroidGap extends PhonegapActivity {
     private void loadUrlIntoView(final String url) {
         if (!url.startsWith("javascript:")) {
             LOG.d(TAG, "DroidGap.loadUrl(%s)", url);
+        }
+        
+        // Init web view if not already done
+        if (this.appView == null) {
+            this.init();
         }
                
         this.url = url;
@@ -404,12 +399,28 @@ public class DroidGap extends PhonegapActivity {
                 // Handle activity parameters
                 me.handleActivityParameters();
 
-                // Initialize callback server
-                me.callbackServer.init(url);
-
+                // Track URLs loaded instead of using appView history
+                me.urls.push(url);
+                me.appView.clearHistory();
+            
+                // Create callback server and plugin manager
+                if (me.callbackServer == null) {
+                    me.callbackServer = new CallbackServer();
+                    me.callbackServer.init(url);
+                }
+                else {
+                    me.callbackServer.reinit(url);
+                }
+                if (me.pluginManager == null) {
+                    me.pluginManager = new PluginManager(me.appView, me);        
+                }
+                else {
+                    me.pluginManager.reinit();
+                }
+                
                 // If loadingDialog property, then show the App loading dialog for first page of app
                 String loading = null;
-                if (me.firstPage) {
+               if (me.urls.size() == 0) {
                   loading = me.getStringProperty("loadingDialog", null);
                 }
                 else {
@@ -449,6 +460,7 @@ public class DroidGap extends PhonegapActivity {
                         // If timeout, then stop loading and handle error
                         if (me.loadUrlTimeout == currentLoadUrlTimeout) {
                             me.appView.stopLoading();
+                            LOG.e(TAG, "DroidGap: TIMEOUT ERROR! - calling webViewClient");
                             me.webViewClient.onReceivedError(me.appView, -6, "The connection to the server was unsuccessful.", url);
                         }
                     }
@@ -468,14 +480,13 @@ public class DroidGap extends PhonegapActivity {
      * @param time              The number of ms to wait before loading webview
      */
     public void loadUrl(final String url, int time) {
-      
       // If first page of app, then set URL to load to be the one passed in
-      if (this.firstPage) {
+      if (this.initUrl == null || (this.urls.size() > 0)) {
         this.loadUrlIntoView(url, time);
       }
       // Otherwise use the URL specified in the activity's extras bundle
       else {
-        this.loadUrlIntoView(this.url);
+        this.loadUrlIntoView(this.initUrl);
       }
     }
 
@@ -487,10 +498,12 @@ public class DroidGap extends PhonegapActivity {
      * @param time              The number of ms to wait before loading webview
      */
     private void loadUrlIntoView(final String url, final int time) {
+      // Clear cancel flag
+      this.cancelLoadUrl = false;
       
       // If not first page of app, then load immediately
-      if (!this.firstPage) {
-        this.loadUrl(url);
+        if (this.urls.size() > 0) {
+        this.loadUrlIntoView(url);
       }
         
       if (!url.startsWith("javascript:")) {
@@ -515,7 +528,7 @@ public class DroidGap extends PhonegapActivity {
                     e.printStackTrace();
                 }
                 if (!me.cancelLoadUrl) {
-                    me.loadUrl(url);
+                    me.loadUrlIntoView(url);
                 }
                 else{
                     me.cancelLoadUrl = false;
@@ -548,9 +561,22 @@ public class DroidGap extends PhonegapActivity {
      * Clear web history in this web view.
      */
     public void clearHistory() {
-        this.clearHistory = true;
-        if (this.appView != null) {
-            this.appView.clearHistory();
+        this.urls.clear();
+        
+        // Leave current url on history stack
+        if (this.url != null) {
+            this.urls.push(this.url);
+        }
+    }
+    
+    /**
+     * Go to previous page in history.  (We manage our own history)
+     */
+    public void backHistory() {
+        if (this.urls.size() > 1) {
+            this.urls.pop(); // Pop current url
+            String url = this.urls.pop(); // Pop prev url that we want to load
+            this.loadUrl(url);
         }
     }
 
@@ -687,6 +713,12 @@ public class DroidGap extends PhonegapActivity {
      */
     protected void onPause() {
         super.onPause();
+        
+        // Don't process pause if shutting down, since onDestroy() will be called
+        if (this.activityState == ACTIVITY_EXITING) {
+            return;
+        }
+
         if (this.appView == null) {
             return;
         }
@@ -722,6 +754,12 @@ public class DroidGap extends PhonegapActivity {
      */
     protected void onResume() {
         super.onResume();
+        
+        if (this.activityState == ACTIVITY_STARTING) {
+            this.activityState = ACTIVITY_RUNNING;
+            return;
+        }
+
         if (this.appView == null) {
             return;
         }
@@ -755,8 +793,6 @@ public class DroidGap extends PhonegapActivity {
         
         if (this.appView != null) {
 
-            // Make sure pause event is sent if onPause hasn't been called before onDestroy
-            this.appView.loadUrl("javascript:try{PhoneGap.onPause.fire();}catch(e){};");
 
             // Send destroy event to JavaScript
             this.appView.loadUrl("javascript:try{PhoneGap.onDestroy.fire();}catch(e){};");
@@ -793,62 +829,60 @@ public class DroidGap extends PhonegapActivity {
     }
 
     /**
-     * Display a new browser with the specified URL.
+     * Load the specified URL in the PhoneGap webview or a new browser instance.
      * 
-     * NOTE: If usePhoneGap is set, only trusted PhoneGap URLs should be loaded,
-     *       since any PhoneGap API can be called by the loaded HTML page.
+     * NOTE: If openExternal is false, only URLs listed in whitelist can be loaded.
      *
      * @param url           The url to load.
-     * @param usePhoneGap   Load url in PhoneGap webview.
-     * @param clearPrev     Clear the activity stack, so new app becomes top of stack
+     * @param openExternal  Load url in browser instead of PhoneGap webview.
+     * @param clearHistory  Clear the history stack, so new page becomes top of history
      * @param params        DroidGap parameters for new app
-     * @throws android.content.ActivityNotFoundException
      */
-    public void showWebPage(String url, boolean usePhoneGap, boolean clearPrev, HashMap<String, Object> params) throws android.content.ActivityNotFoundException {
-        Intent intent = null;
-        if (usePhoneGap) {
-            try {
-                intent = new Intent().setClass(this, Class.forName(this.getComponentName().getClassName()));
-                intent.putExtra("url", url);
-
-                // Add parameters
-                if (params != null) {
-                    java.util.Set<Entry<String,Object>> s = params.entrySet();
-                    java.util.Iterator<Entry<String,Object>> it = s.iterator();
-                    while(it.hasNext()) {
-                        Entry<String,Object> entry = it.next();
-                        String key = entry.getKey();
-                        Object value = entry.getValue();
-                        if (value == null) {
-                        }
-                        else if (value.getClass().equals(String.class)) {
-                            intent.putExtra(key, (String)value);
-                        }
-                        else if (value.getClass().equals(Boolean.class)) {
-                            intent.putExtra(key, (Boolean)value);
-                        }
-                        else if (value.getClass().equals(Integer.class)) {
-                            intent.putExtra(key, (Integer)value);
-                        }
-                    }
-                }                
-                super.startActivityForResult(intent, PG_REQUEST_CODE);
-            } catch (ClassNotFoundException e) {
-                e.printStackTrace();
-                intent = new Intent(Intent.ACTION_VIEW);
-                intent.setData(Uri.parse(url));
-                this.startActivity(intent);
-            }
-        }
-        else {
-            intent = new Intent(Intent.ACTION_VIEW);
-            intent.setData(Uri.parse(url));
-            this.startActivity(intent);
+    public void showWebPage(String url, boolean openExternal, boolean clearHistory, HashMap<String, Object> params) { //throws android.content.ActivityNotFoundException {
+        LOG.d(TAG, "showWebPage(%s, %b, %b, HashMap", url, openExternal, clearHistory);
+        
+        // If clearing history
+        if (clearHistory) {
+            this.clearHistory();
         }
         
-        // Finish current activity
-        if (clearPrev) {
-            this.endActivity();
+        // If loading into our webview
+        if (!openExternal) {
+            
+            // Make sure url is in whitelist
+            if (url.startsWith("file://") || url.indexOf(this.baseUrl) == 0 || isUrlWhiteListed(url)) {
+                // TODO: What about params?
+                
+                // Clear out current url from history, since it will be replacing it
+                if (clearHistory) {
+                    this.urls.clear();
+                }
+                
+                // Load new URL
+                this.loadUrl(url);
+            }
+            // Load in default viewer if not
+            else {
+                LOG.w(TAG, "showWebPage: Cannot load URL into webview since it is not in white list.  Loading into browser instead. (URL="+url+")");
+                try {
+                    Intent intent = new Intent(Intent.ACTION_VIEW);
+                    intent.setData(Uri.parse(url));
+                    this.startActivity(intent);
+                } catch (android.content.ActivityNotFoundException e) {
+                    LOG.e(TAG, "Error loading url "+url, e);
+                }
+            }
+        }
+        
+        // Load in default view intent
+        else {
+            try {
+                Intent intent = new Intent(Intent.ACTION_VIEW);
+                intent.setData(Uri.parse(url));
+                this.startActivity(intent);
+            } catch (android.content.ActivityNotFoundException e) {
+                LOG.e(TAG, "Error loading url "+url, e);
+            }
         }
     }
     
@@ -913,11 +947,30 @@ public class DroidGap extends PhonegapActivity {
             AlertDialog.Builder dlg = new AlertDialog.Builder(this.ctx);
             dlg.setMessage(message);
             dlg.setTitle("Alert");
-            dlg.setCancelable(false);
+            //Don't let alerts break the back button
+            dlg.setCancelable(true);
             dlg.setPositiveButton(android.R.string.ok,
                 new AlertDialog.OnClickListener() {
                     public void onClick(DialogInterface dialog, int which) {
                         result.confirm();
+                    }
+                });
+            dlg.setOnCancelListener(
+               new DialogInterface.OnCancelListener() {
+                   public void onCancel(DialogInterface dialog) {
+                       result.confirm();
+                       }
+                   });
+            dlg.setOnKeyListener(new DialogInterface.OnKeyListener() {
+                //DO NOTHING
+                public boolean onKey(DialogInterface dialog, int keyCode, KeyEvent event) {
+                    if(keyCode == KeyEvent.KEYCODE_BACK)
+                    {
+                        result.confirm();
+                        return false;
+                    }
+                    else
+                        return true;
                     }
                 });
             dlg.create();
@@ -952,23 +1005,23 @@ public class DroidGap extends PhonegapActivity {
                     }
                 });
             dlg.setOnCancelListener(
-              new DialogInterface.OnCancelListener() {                        
-          public void onCancel(DialogInterface dialog) {
-            result.cancel();
-          }
-        });
+               new DialogInterface.OnCancelListener() {
+                    public void onCancel(DialogInterface dialog) {
+                        result.cancel();
+                        }
+                    });
             dlg.setOnKeyListener(new DialogInterface.OnKeyListener() {
-              //DO NOTHING
-        public boolean onKey(DialogInterface dialog, int keyCode, KeyEvent event) {
-          if(keyCode == KeyEvent.KEYCODE_BACK)
-          {
-            result.cancel();
-            return false;
-          }
-          else
-            return true;
-        }
-      });
+                //DO NOTHING
+                public boolean onKey(DialogInterface dialog, int keyCode, KeyEvent event) {
+                    if(keyCode == KeyEvent.KEYCODE_BACK)
+                    {
+                        result.cancel();
+                        return false;
+                    }
+                    else
+                        return true;
+                    }
+                });
             dlg.create();
             dlg.show();
             return true;
@@ -978,6 +1031,9 @@ public class DroidGap extends PhonegapActivity {
          * Tell the client to display a prompt dialog to the user. 
          * If the client returns true, WebView will assume that the client will 
          * handle the prompt dialog and call the appropriate JsPromptResult method.
+         * 
+         * Since we are hacking prompts for our own purposes, we should not be using them for 
+         * this purpose, perhaps we should hack console.log to do this instead!
          * 
          * @param view
          * @param url
@@ -991,7 +1047,7 @@ public class DroidGap extends PhonegapActivity {
             // Security check to make sure any requests are coming from the page initially
             // loaded in webview and not another loaded in an iframe.
             boolean reqOk = false;
-            if (url.indexOf(this.ctx.baseUrl) == 0 || isUrlWhiteListed(url)) {
+            if (url.startsWith("file://") || url.indexOf(this.ctx.baseUrl) == 0 || isUrlWhiteListed(url)) {
                 reqOk = true;
             }
             
@@ -1109,8 +1165,15 @@ public class DroidGap extends PhonegapActivity {
         @Override
         public void onConsoleMessage(String message, int lineNumber, String sourceID)
         {       
-            // This is a kludgy hack!!!!
-            LOG.d(TAG, "%s: Line %d : %s", sourceID, lineNumber, message);              
+            LOG.d(TAG, "%s: Line %d : %s", sourceID, lineNumber, message);
+            super.onConsoleMessage(message, lineNumber, sourceID);
+        }
+        
+        @Override
+        public boolean onConsoleMessage(ConsoleMessage consoleMessage)
+        {       
+            LOG.d(TAG, consoleMessage.message());
+            return super.onConsoleMessage(consoleMessage);
         }
 
         @Override
@@ -1228,14 +1291,8 @@ public class DroidGap extends PhonegapActivity {
 
                 // If our app or file:, then load into a new phonegap webview container by starting a new instance of our activity.
                 // Our app continues to run.  When BACK is pressed, our app is redisplayed.
-                if (this.ctx.loadInWebView || url.startsWith("file://") || url.indexOf(this.ctx.baseUrl) == 0 || isUrlWhiteListed(url)) {
-                    try {
-                        // Init parameters to new DroidGap activity and propagate existing parameters
-                        HashMap<String, Object> params = new HashMap<String, Object>();
-                        this.ctx.showWebPage(url, true, false, params);
-                    } catch (android.content.ActivityNotFoundException e) {
-                        LOG.e(TAG, "Error loading url into DroidGap - "+url, e);
-                    }
+                if (url.startsWith("file://") || url.indexOf(this.ctx.baseUrl) == 0 || isUrlWhiteListed(url)) {
+                    this.ctx.loadUrl(url);
                 }
 
                 // If not our application, let default viewer handle
@@ -1250,6 +1307,14 @@ public class DroidGap extends PhonegapActivity {
                 }
             }
             return true;
+        }
+        
+        @Override
+        public void onPageStarted(WebView view, String url, Bitmap favicon) {
+
+            // Clear history so history.back() doesn't do anything.  
+            // So we can reinit() native side CallbackServer & PluginManager.
+            view.clearHistory(); 
         }
         
         /**
@@ -1291,11 +1356,6 @@ public class DroidGap extends PhonegapActivity {
                 t.start();
             }
 
-            // Clear history, so that previous screen isn't there when Back button is pressed
-            if (this.ctx.clearHistory) {
-                this.ctx.clearHistory = false;
-                this.ctx.appView.clearHistory();
-            }
 
             // Shutdown if blank loaded
             if (url.equals("about:blank")) {
@@ -1390,10 +1450,11 @@ public class DroidGap extends PhonegapActivity {
     
     
     /**
-     * End this activity by simulating backbutton keypress
+     * End this activity by calling finish for activity
      */
     public void endActivity() {
-        super.onKeyDown(KeyEvent.KEYCODE_BACK, new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_BACK));
+        this.activityState = ACTIVITY_EXITING;
+        this.finish();
     }
     
     /**
@@ -1421,13 +1482,14 @@ public class DroidGap extends PhonegapActivity {
             else {
 
                 // Go to previous page in webview if it is possible to go back
-                if (this.appView.canGoBack()) {
-                    this.appView.goBack();
+                if (this.urls.size() > 1) {
+                    this.backHistory();
                     return true;
                 }
 
                 // If not, then invoke behavior of super class
                 else {
+                    this.activityState = ACTIVITY_EXITING;
                     return super.onKeyDown(keyCode, event);
                 }
             }
@@ -1498,17 +1560,6 @@ public class DroidGap extends PhonegapActivity {
      */
      protected void onActivityResult(int requestCode, int resultCode, Intent intent) {
          super.onActivityResult(requestCode, resultCode, intent);
-         
-         // If a subsequent DroidGap activity is returning
-         if (requestCode == PG_REQUEST_CODE) {
-             // If terminating app, then shut down this activity too
-             if (resultCode == Activity.RESULT_OK) {
-                 this.setResult(Activity.RESULT_OK);
-                 this.endActivity();
-             }
-             return;
-         }
-         
          IPlugin callback = this.activityResultCallback;
          if (callback != null) {
              callback.onActivityResult(requestCode, resultCode, intent);
@@ -1528,7 +1579,7 @@ public class DroidGap extends PhonegapActivity {
       * @param description  A String describing the error.
       * @param failingUrl   The url that failed to load. 
       */
-     public void onReceivedError(int errorCode, final String description, final String failingUrl) {
+     public void onReceivedError(final int errorCode, final String description, final String failingUrl) {
          final DroidGap me = this;
 
          // If errorUrl specified, then load it
@@ -1544,15 +1595,12 @@ public class DroidGap extends PhonegapActivity {
          }
          // If not, then display error dialog
          else {
-        	 //If there's an error in the Host Application that we can't show, throw this up on DroidGap
-        	 //This has to run on the UI thread!
-        	 me.runOnUiThread(new Runnable()
-        	 {
-        		 public void run() {
-        			 me.appView.setVisibility(View.GONE);
-        			 me.displayError("Application Error", description + " ("+failingUrl+")", "OK", true);
-        		 }
-        	 });
+            me.runOnUiThread(new Runnable() {
+                 public void run() {
+                     me.appView.setVisibility(View.GONE);
+                     me.displayError("Application Error", description + " ("+failingUrl+")", "OK", true);
+                 }
+             });
          }
      }
 
@@ -1716,13 +1764,35 @@ public class DroidGap extends PhonegapActivity {
      * @param subdomains    T=include all subdomains under origin
      */
     public void addWhiteListEntry(String origin, boolean subdomains) {
-        if (subdomains) {
-            LOG.d(TAG, "Origin to allow with subdomains: %s", origin);
-            whiteList.add(Pattern.compile(origin.replaceFirst("https{0,1}://", "^https{0,1}://.*")));
-        } else {
-            LOG.d(TAG, "Origin to allow: %s", origin);
-            whiteList.add(Pattern.compile(origin.replaceFirst("https{0,1}://", "^https{0,1}://")));
-        }    
+      try {
+        // Unlimited access to network resources
+        if(origin.compareTo("*") == 0) {
+            LOG.d(TAG, "Unlimited access to network resources");
+            whiteList.add(Pattern.compile("*"));
+        } else { // specific access
+          // check if subdomains should be included
+          // TODO: we should not add more domains if * has already been added
+          if (subdomains) {
+              // XXX making it stupid friendly for people who forget to include protocol/SSL
+              if(origin.startsWith("http")) {
+                whiteList.add(Pattern.compile(origin.replaceFirst("https{0,1}://", "^https{0,1}://.*")));
+              } else {
+                whiteList.add(Pattern.compile("^https{0,1}://.*"+origin));
+              }
+              LOG.d(TAG, "Origin to allow with subdomains: %s", origin);
+          } else {
+              // XXX making it stupid friendly for people who forget to include protocol/SSL
+              if(origin.startsWith("http")) {
+                whiteList.add(Pattern.compile(origin.replaceFirst("https{0,1}://", "^https{0,1}://")));
+              } else {
+                whiteList.add(Pattern.compile("^https{0,1}://"+origin));
+              }
+              LOG.d(TAG, "Origin to allow: %s", origin);
+          }    
+        }
+      } catch(Exception e) {
+        LOG.d(TAG, "Failed to add origin %s", origin);
+      }
     }
 
     /**

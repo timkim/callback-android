@@ -42,7 +42,7 @@ public final class PluginManager {
     // Map URL schemes like foo: to plugins that want to handle those schemes
     // This would allow how all URLs are handled to be offloaded to a plugin
     protected HashMap<String, String> urlMap = new HashMap<String,String>();
-  
+ 
   /**
    * Constructor.
    * 
@@ -53,6 +53,17 @@ public final class PluginManager {
     this.ctx = ctx;
     this.app = app;
     this.loadPlugins();
+  }
+  
+  /**
+   * Re-init when loading a new HTML page into webview.
+   */
+  public void reinit() {
+      
+      // Stop plugins on current HTML page and discard
+      this.onPause(false);
+      this.onDestroy();
+      this.plugins = new HashMap<String, IPlugin>();
   }
   
   /**

@@ -6,6 +6,8 @@
  * Copyright (c) 2010-2011, IBM Corporation
  */
 
+// Version 1.2.0
+
 if (typeof PhoneGap === "undefined") {
 
 /**
@@ -23,13 +25,18 @@ if (typeof PhoneGap === "undefined") {
  * onDestroy                  Internal event fired when app is being destroyed (User should use window.onunload event, not this one).
  *
  * The only PhoneGap events that user code should register for are:
- *      onDeviceReady
- *      onResume
+ *      deviceready           PhoneGap native code is initialized and PhoneGap APIs can be called from JavaScript
+ *      pause                 App has moved to background
+ *      resume                App has returned to foreground
  *
  * Listeners can be registered as:
  *      document.addEventListener("deviceready", myDeviceReadyListener, false);
  *      document.addEventListener("resume", myResumeListener, false);
  *      document.addEventListener("pause", myPauseListener, false);
+ *
+ * The DOM lifecycle events should be used for saving and restoring state
+ *      window.onload
+ *      window.onunload
  */
 
 if (typeof(DeviceInfo) !== 'object') {
@@ -371,9 +378,6 @@ PhoneGap.Channel.join(function() {
         prompt("", "gap_init:");
 
         PhoneGap.onDeviceReady.fire();
-
-        // Fire the onresume event, since first one happens before JavaScript is loaded
-        PhoneGap.onResume.fire();
     }, PhoneGap.deviceReadyChannelsArray);
 
 }, [ PhoneGap.onDOMContentLoaded, PhoneGap.onNativeReady ]);
@@ -917,7 +921,7 @@ PhoneGap.JSCallback = function() {
 
             // If server is stopping
             else if (xmlhttp.status === 503) {
-                console.log("JSCallback Error: Service unavailable.  Stopping callbacks.");
+                console.log("JSCallback Server Closed: Stopping callbacks.");
             }
 
             // If request wasn't GET
