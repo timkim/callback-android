@@ -23,6 +23,8 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import com.phonegap.api.Plugin;
 import com.phonegap.api.PluginResult;
+
+import android.app.Activity;
 import android.util.Log;
 
 public class ContactManager extends Plugin {
@@ -79,7 +81,7 @@ public class ContactManager extends Plugin {
          * older phones.
          */
         if (this.contactAccessor == null) {
-            this.contactAccessor = new ContactAccessorSdk5(this.webView, this.ctx);
+            this.contactAccessor = new ContactAccessorSdk5(this.webView, (Activity) this.ctx);
         }
         
 		try {

@@ -28,6 +28,7 @@ import org.json.JSONObject;
 
 import android.app.Activity;
 import android.content.ContentValues;
+import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -188,7 +189,7 @@ public class Capture extends Plugin {
         Intent intent = new Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE);
 
         // Specify file so that large image is captured and returned
-        File photo = new File(DirectoryManager.getTempDirectoryPath(ctx),  "Capture.jpg");
+        File photo = new File(DirectoryManager.getTempDirectoryPath((Context) ctx),  "Capture.jpg");
         intent.putExtra(android.provider.MediaStore.EXTRA_OUTPUT, Uri.fromFile(photo));
         this.imageUri = Uri.fromFile(photo);
 
@@ -241,7 +242,7 @@ public class Capture extends Plugin {
                 try {
                     // Create an ExifHelper to save the exif data that is lost during compression
                     ExifHelper exif = new ExifHelper();
-                    exif.createInFile(DirectoryManager.getTempDirectoryPath(ctx) + "/Capture.jpg");
+                    exif.createInFile(DirectoryManager.getTempDirectoryPath((Context) ctx) + "/Capture.jpg");
                     exif.readExifData();
                     
                     // Read in bitmap of captured image

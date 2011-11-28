@@ -19,26 +19,24 @@
 package com.phonegap.api;
 
 import android.app.Activity;
+import android.app.Service;
+import android.content.BroadcastReceiver;
+import android.content.ContentResolver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.res.AssetManager;
+import android.content.res.Resources;
+import android.database.Cursor;
+import android.hardware.SensorManager;
+import android.net.Uri;
 
 /**
  * The Phonegap activity abstract class that is extended by DroidGap.
  * It is used to isolate plugin development, and remove dependency on entire Phonegap library.
  */
-public abstract class PhonegapActivity extends Activity {
+public interface PhonegapActivity {
 
-    /**
-     * @deprecated
-     * Add services to res/xml/plugins.xml instead.
-     * 
-     * Add a class that implements a service.
-     * 
-     * @param serviceType
-     * @param className
-     */
-    @Deprecated
-    abstract public void addService(String serviceType, String className);
-    
     /**
      * Send JavaScript statement back to JavaScript.
      * 
@@ -77,4 +75,29 @@ public abstract class PhonegapActivity extends Activity {
      * @param data          The message data
      */
     abstract public void postMessage(String id, Object data);
+
+    public abstract Resources getResources();
+
+    public abstract String getPackageName();
+
+    public abstract Object getSystemService(String service);
+
+    public abstract Context getContext();
+    
+    public abstract Context getBaseContext();
+
+    public abstract Intent registerReceiver(BroadcastReceiver receiver,
+            IntentFilter intentFilter);
+
+    public abstract ContentResolver getContentResolver();
+
+    public abstract void unregisterReceiver(BroadcastReceiver receiver);
+
+    public abstract Cursor managedQuery(Uri parse, String[] strings,
+            Object object, Object object2, Object object3);
+
+    public abstract void runOnUiThread(Runnable runnable);
+
+    public abstract AssetManager getAssets();
+
 }

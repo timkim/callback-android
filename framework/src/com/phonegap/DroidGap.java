@@ -41,6 +41,7 @@ import android.content.pm.PackageManager;
 import android.content.pm.PackageManager.NameNotFoundException;
 import android.content.res.Configuration;
 import android.content.res.XmlResourceParser;
+import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.Rect;
@@ -158,7 +159,7 @@ import 	org.xmlpull.v1.XmlPullParserException;
  *          ...
  *      </plugins>
  */
-public class DroidGap extends PhonegapActivity {
+public class DroidGap extends Activity implements PhonegapActivity {
     public static String TAG = "DroidGap";
     
     // The webview for our app
@@ -279,7 +280,7 @@ public class DroidGap extends PhonegapActivity {
 
         WebViewReflect.checkCompatibility();
 
-        this.appView.setWebChromeClient(new GapClient(DroidGap.this));
+        this.appView.setWebChromeClient(new GapChromeClient(DroidGap.this));
         this.setWebViewClient(this.appView, new GapViewClient(this));
 
         //14 is Ice Cream Sandwich!
@@ -975,7 +976,7 @@ public class DroidGap extends PhonegapActivity {
     /**
      * Set the chrome handler.
      */
-    public class GapClient extends WebChromeClient {
+    public class GapChromeClient extends WebChromeClient {
 
         private String TAG = "PhoneGapLog";
         private long MAX_QUOTA = 100 * 1024 * 1024;
@@ -986,7 +987,7 @@ public class DroidGap extends PhonegapActivity {
          * 
          * @param ctx
          */
-        public GapClient(Context ctx) {
+        public GapChromeClient(Context ctx) {
             this.ctx = (DroidGap)ctx;
         }
 
@@ -1583,7 +1584,6 @@ public class DroidGap extends PhonegapActivity {
          }        
      }
 
-     @Override
      public void setActivityResultCallback(IPlugin plugin) {
          this.activityResultCallback = plugin;
      }
@@ -1873,5 +1873,14 @@ public class DroidGap extends PhonegapActivity {
     {
         this.postMessage("onOptionsItemSelected", item);
         return true;
+    }
+
+    public Cursor managedQuery(Uri parse, String[] strings, Object object,
+            Object object2, Object object3) {
+        return this.managedQuery(parse, strings, object, object2, object3);
+    }
+
+    public Context getContext() {
+        return this;
     }
 }
