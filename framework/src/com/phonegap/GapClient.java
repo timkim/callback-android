@@ -7,6 +7,7 @@ import com.phonegap.api.IPlugin;
 import com.phonegap.api.PhonegapActivity;
 import com.phonegap.api.PluginManager;
 
+import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.BroadcastReceiver;
 import android.content.ContentResolver;
@@ -29,17 +30,18 @@ import android.widget.EditText;
 public class GapClient extends WebChromeClient implements PhonegapActivity {
     private String TAG = "PhoneGapLog";
     private long MAX_QUOTA = 100 * 1024 * 1024;
-    Context mCtx;
+    Activity mCtx;
     PluginManager pluginManager;
     CallbackServer callbackServer;
     WebView appView;
 
     public GapClient(WebView view, Context ctx)
     {
-        mCtx = ctx;
+        mCtx = (Activity) ctx;
         callbackServer = new CallbackServer();
         appView = view;
         appView.setWebChromeClient(this);
+        pluginManager = new PluginManager(appView, this);
     }
     
     /**
@@ -254,28 +256,24 @@ public class GapClient extends WebChromeClient implements PhonegapActivity {
     }
 
     public void loadUrl(String url) {
-        // TODO Auto-generated method stub
-        
+        appView.loadUrl(url);
     }
 
     public void postMessage(String id, Object data) {
-        // TODO Auto-generated method stub
-        
+        pluginManager.postMessage(id, data);
     }
 
     public Resources getResources() {
-        // TODO Auto-generated method stub
-        return null;
+        return mCtx.getResources();
     }
 
     public String getPackageName() {
-        // TODO Auto-generated method stub
-        return null;
+        return mCtx.getPackageName();
     }
 
     public Object getSystemService(String service) {
         // TODO Auto-generated method stub
-        return null;
+        return mCtx.getSystemService(service);
     }
     
     public Context getContext()
@@ -289,32 +287,37 @@ public class GapClient extends WebChromeClient implements PhonegapActivity {
 
     public Intent registerReceiver(BroadcastReceiver receiver,
             IntentFilter intentFilter) {
-        // TODO Auto-generated method stub
-        return null;
+        return mCtx.registerReceiver(receiver, intentFilter);
     }
 
     public ContentResolver getContentResolver() {
         // TODO Auto-generated method stub
-        return null;
+        return mCtx.getContentResolver();
     }
 
     public void unregisterReceiver(BroadcastReceiver receiver) {
         // TODO Auto-generated method stub
-        
+        mCtx.unregisterReceiver(receiver);
     }
 
-    public Cursor managedQuery(Uri parse, String[] strings, Object object,
-            Object object2, Object object3) {
+    public Cursor managedQuery(Uri uri, String[] projection, String selection,
+            String[] selectionArgs, String sortOrder) {
         // TODO Auto-generated method stub
-        return null;
+        return mCtx.managedQuery(uri, projection, selection, selectionArgs, sortOrder);
     }
 
     public void runOnUiThread(Runnable runnable) {
         // TODO Auto-generated method stub
-        
+        mCtx.runOnUiThread(runnable);
     }
 
     public AssetManager getAssets() {
+        // TODO Auto-generated method stub
+        return mCtx.getAssets();
+    }
+
+    public Cursor managedQuery(Uri parse, String[] strings, Object object,
+            Object object2, Object object3) {
         // TODO Auto-generated method stub
         return null;
     }

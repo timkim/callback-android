@@ -1,5 +1,6 @@
 package com.phonegap;
 
+import android.app.Activity;
 import android.content.Context;
 import android.util.AttributeSet;
 import android.webkit.WebSettings;
@@ -10,10 +11,27 @@ import android.webkit.WebSettings.LayoutAlgorithm;
 public class PhoneGapView extends WebView {
 
     GapClient appCode;
+    PhoneGapClient viewClient;
+    Activity app;
     
     public PhoneGapView(Context context)
     {
         super(context);
+        app = (Activity) context;
+        init();
+    }
+    
+    public PhoneGapView(Context context, AttributeSet attrs)
+    {
+        super(context, attrs);
+        app = (Activity) context;
+        init();
+    }
+    
+    public PhoneGapView(Context context, AttributeSet attrs, int defStyle)
+    {
+        super(context, attrs, defStyle);
+        app = (Activity) context;
         init();
     }
     
@@ -26,19 +44,7 @@ public class PhoneGapView extends WebView {
     @SuppressWarnings("deprecation")
     public void init()
     {
-      //14 is Ice Cream Sandwich!
-        if(android.os.Build.VERSION.SDK_INT < 14)
-        {
-            //This hack fixes legacy PhoneGap apps
-            //We should be using real pixels, not pretend pixels
-            final float scale = getResources().getDisplayMetrics().density;
-            int initialScale = (int) (scale * 100);
-            setInitialScale(initialScale);
-        }
-        else
-        {
-            setInitialScale(0);
-        }
+        setInitialScale(0);
         setVerticalScrollBarEnabled(false);
         requestFocusFromTouch();
         // Enable JavaScript
@@ -63,6 +69,8 @@ public class PhoneGapView extends WebView {
         
         //Initalize the other parts of the application
         appCode = new GapClient(this, this.getContext());
+        viewClient = new PhoneGapClient(app, this);
+        
     }
 
 }
