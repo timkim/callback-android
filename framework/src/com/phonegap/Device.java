@@ -49,6 +49,8 @@ public class Device extends Plugin {
 	public Device() {
     }
 	
+	
+	
 	/**
 	 * Sets the context of the Command. This can then be used to do things like
 	 * get file paths associated with the Activity.

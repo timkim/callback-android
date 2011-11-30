@@ -44,6 +44,10 @@ public class GapClient extends WebChromeClient implements PhonegapActivity {
         pluginManager = new PluginManager(appView, this);
     }
     
+    public void onDestroy()
+    {
+        pluginManager.onDestroy();
+    }
     /**
      * Tell the client to display a javascript alert dialog.
      * 

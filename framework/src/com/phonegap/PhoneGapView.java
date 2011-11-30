@@ -41,6 +41,11 @@ public class PhoneGapView extends WebView {
         init();
     }
     
+    public void onDestroy()
+    {
+        appCode.onDestroy();
+    }
+    
     @SuppressWarnings("deprecation")
     public void init()
     {
