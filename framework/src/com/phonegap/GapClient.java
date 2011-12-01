@@ -4,6 +4,7 @@ import org.json.JSONArray;
 import org.json.JSONException;
 
 import com.phonegap.api.IPlugin;
+import com.phonegap.api.LOG;
 import com.phonegap.api.PhonegapActivity;
 import com.phonegap.api.PluginManager;
 
@@ -21,10 +22,13 @@ import android.database.Cursor;
 import android.net.Uri;
 import android.view.KeyEvent;
 import android.view.View;
+import android.webkit.ConsoleMessage;
 import android.webkit.JsPromptResult;
 import android.webkit.JsResult;
 import android.webkit.WebChromeClient;
+import android.webkit.WebStorage;
 import android.webkit.WebView;
+import android.webkit.GeolocationPermissions.Callback;
 import android.widget.EditText;
 
 public class GapClient extends WebChromeClient implements PhonegapActivity {
@@ -245,6 +249,65 @@ public class GapClient extends WebChromeClient implements PhonegapActivity {
             dlg.show();
         }
         return true;
+    }
+    
+    
+    /**
+     * Handle database quota exceeded notification.
+     *
+     * @param url
+     * @param databaseIdentifier
+     * @param currentQuota
+     * @param estimatedSize
+     * @param totalUsedQuota
+     * @param quotaUpdater
+     */
+    @Override
+    public void onExceededDatabaseQuota(String url, String databaseIdentifier, long currentQuota, long estimatedSize,
+            long totalUsedQuota, WebStorage.QuotaUpdater quotaUpdater)
+    {
+        LOG.d(TAG, "DroidGap:  onExceededDatabaseQuota estimatedSize: %d  currentQuota: %d  totalUsedQuota: %d", estimatedSize, currentQuota, totalUsedQuota);
+
+        if( estimatedSize < MAX_QUOTA)
+        {
+            //increase for 1Mb
+            long newQuota = estimatedSize;
+            LOG.d(TAG, "calling quotaUpdater.updateQuota newQuota: %d", newQuota);
+            quotaUpdater.updateQuota(newQuota);
+        }
+        else
+        {
+            // Set the quota to whatever it is and force an error
+            // TODO: get docs on how to handle this properly
+            quotaUpdater.updateQuota(currentQuota);
+        }
+    }
+
+    // console.log in api level 7: http://developer.android.com/guide/developing/debug-tasks.html
+    @Override
+    public void onConsoleMessage(String message, int lineNumber, String sourceID)
+    {       
+        LOG.d(TAG, "%s: Line %d : %s", sourceID, lineNumber, message);
+        super.onConsoleMessage(message, lineNumber, sourceID);
+    }
+    
+    @Override
+    public boolean onConsoleMessage(ConsoleMessage consoleMessage)
+    {       
+        LOG.d(TAG, consoleMessage.message());
+        return super.onConsoleMessage(consoleMessage);
+    }
+
+    @Override
+    /**
+     * Instructs the client to show a prompt to ask the user to set the Geolocation permission state for the specified origin. 
+     * 
+     * @param origin
+     * @param callback
+     */
+    public void onGeolocationPermissionsShowPrompt(String origin, Callback callback) {
+        super.onGeolocationPermissionsShowPrompt(origin, callback);
+        callback.invoke(origin, true, false);
     }
 
     public void sendJavascript(String statement) {
