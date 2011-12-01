@@ -34,6 +34,9 @@ public class GapClient extends WebChromeClient implements PhonegapActivity {
     PluginManager pluginManager;
     CallbackServer callbackServer;
     WebView appView;
+    private IPlugin activityResultCallback;
+    private Object activityResultKeepRunning;
+    private boolean keepRunning;
 
     public GapClient(WebView view, Context ctx)
     {
@@ -250,9 +253,16 @@ public class GapClient extends WebChromeClient implements PhonegapActivity {
 
     public void startActivityForResult(IPlugin command, Intent intent,
             int requestCode) {
-        // TODO Auto-generated method stub
+        this.activityResultCallback = command;
+        this.activityResultKeepRunning = this.keepRunning;
         
-    }
+        // If multitasking turned on, then disable it for activities that return results
+        if (command != null) {
+            this.keepRunning = false;
+        }
+        
+        // Start activity
+        mCtx.startActivityForResult(intent, requestCode);    }
 
     public void setActivityResultCallback(IPlugin plugin) {
         // TODO Auto-generated method stub
@@ -286,7 +296,7 @@ public class GapClient extends WebChromeClient implements PhonegapActivity {
     }
     
     public Context getBaseContext() {
-        return ((PhonegapActivity) mCtx).getBaseContext();
+        return mCtx.getBaseContext();
     }
 
     public Intent registerReceiver(BroadcastReceiver receiver,

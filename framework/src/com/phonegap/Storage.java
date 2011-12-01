@@ -23,6 +23,8 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import com.phonegap.api.Plugin;
 import com.phonegap.api.PluginResult;
+
+import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.*;
 
@@ -155,7 +157,8 @@ public class Storage extends Plugin {
 
 		// If no database path, generate from application package
 		if (this.path == null) {
-			Package pack = this.ctx.getClass().getPackage();
+		    Context mCtx = this.ctx.getContext();
+			Package pack = mCtx.getClass().getPackage();
 			String appPackage = pack.getName();
 			this.setStorage(appPackage);
 		}
