@@ -20,39 +20,39 @@ import android.webkit.WebView;
 import android.webkit.WebSettings.LayoutAlgorithm;
 
 
-public class PhoneGapView extends WebView {
+public class CordovaView extends WebView {
 
     private static final String TAG = null;
     GapClient appCode;
-    PhoneGapClient viewClient;
+    CordovaClient viewClient;
     Activity app;
     private boolean classicRender;
     private ArrayList<Pattern> whiteList = new ArrayList<Pattern>();
     private HashMap<String, Boolean> whiteListCache = new HashMap<String,Boolean>();
 
     
-    public PhoneGapView(Context context)
+    public CordovaView(Context context)
     {
         super(context);
         app = (Activity) context;
         init();
     }
     
-    public PhoneGapView(Context context, AttributeSet attrs)
+    public CordovaView(Context context, AttributeSet attrs)
     {
         super(context, attrs);
         app = (Activity) context;
         init();
     }
     
-    public PhoneGapView(Context context, AttributeSet attrs, int defStyle)
+    public CordovaView(Context context, AttributeSet attrs, int defStyle)
     {
         super(context, attrs, defStyle);
         app = (Activity) context;
         init();
     }
     
-    public PhoneGapView(Context context, AttributeSet attrs, int defStyle,
+    public CordovaView(Context context, AttributeSet attrs, int defStyle,
             boolean privateBrowsing) {
         super(context, attrs, defStyle, privateBrowsing);
         init();
@@ -91,7 +91,7 @@ public class PhoneGapView extends WebView {
         
         //Initalize the other parts of the application
         appCode = new GapClient(this, this.getContext());
-        viewClient = new PhoneGapClient(app, this);
+        viewClient = new CordovaClient(app, this);
         
     }
 

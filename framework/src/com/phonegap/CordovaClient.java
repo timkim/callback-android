@@ -19,10 +19,10 @@ import com.phonegap.api.LOG;
 /**
  * The webview client receives notifications about appView
  */
-public class PhoneGapClient extends WebViewClient {
+public class CordovaClient extends WebViewClient {
 
     Activity ctx;
-    PhoneGapView appView;
+    CordovaView appView;
     String TAG = "PhoneGapClient";
 
     /**
@@ -30,7 +30,7 @@ public class PhoneGapClient extends WebViewClient {
      * 
      * @param ctx
      */
-    public PhoneGapClient(Activity ctx, PhoneGapView appCode) {
+    public CordovaClient(Activity ctx, CordovaView appCode) {
         this.ctx = ctx;
         this.appView = appCode;
         appCode.setWebViewClient(this);
