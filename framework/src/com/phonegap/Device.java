@@ -23,7 +23,7 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import com.phonegap.api.LOG;
-import com.phonegap.api.PhonegapActivity;
+import com.phonegap.api.CordovaInterface;
 import com.phonegap.api.Plugin;
 import com.phonegap.api.PluginResult;
 
@@ -57,7 +57,7 @@ public class Device extends Plugin {
 	 * 
 	 * @param ctx The context of the main Activity.
 	 */
-	public void setContext(PhonegapActivity ctx) {
+	public void setContext(CordovaInterface ctx) {
 		super.setContext(ctx);
         Device.uuid = getUuid();
         this.initTelephonyReceiver();
@@ -126,7 +126,7 @@ public class Device extends Plugin {
     private void initTelephonyReceiver() {
         IntentFilter intentFilter = new IntentFilter() ;
         intentFilter.addAction(TelephonyManager.ACTION_PHONE_STATE_CHANGED);
-        final PhonegapActivity myctx = this.ctx;
+        final CordovaInterface myctx = this.ctx;
         this.telephonyReceiver = new BroadcastReceiver() {
             
             @Override

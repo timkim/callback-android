@@ -43,7 +43,7 @@ public final class PluginManager {
 	private HashMap<String, IPlugin> plugins = new HashMap<String,IPlugin>();
 	private HashMap<String, String> services = new HashMap<String,String>();
 	
-	private final PhonegapActivity ctx;
+	private final CordovaInterface ctx;
 	private final WebView app;
 	
     // Map URL schemes like foo: to plugins that want to handle those schemes
@@ -56,7 +56,7 @@ public final class PluginManager {
 	 * @param app
 	 * @param ctx
 	 */
-	public PluginManager(WebView app, PhonegapActivity ctx) {
+	public PluginManager(WebView app, CordovaInterface ctx) {
 		this.ctx = ctx;
 		this.app = app;
 		this.loadPlugins();
@@ -138,7 +138,7 @@ public final class PluginManager {
 		try {
 			final JSONArray args = new JSONArray(jsonArgs);
 			final IPlugin plugin = this.getPlugin(service); 
-			final PhonegapActivity ctx = this.ctx;
+			final CordovaInterface ctx = this.ctx;
 			if (plugin != null) {
 				runAsync = async && !plugin.isSynch(action);
 				if (runAsync) {

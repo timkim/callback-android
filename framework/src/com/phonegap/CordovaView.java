@@ -10,6 +10,7 @@ import java.util.regex.Pattern;
 import org.xmlpull.v1.XmlPullParserException;
 
 import com.phonegap.api.LOG;
+import com.phonegap.api.PluginManager;
 
 import android.app.Activity;
 import android.content.Context;
@@ -56,6 +57,21 @@ public class CordovaView extends WebView {
             boolean privateBrowsing) {
         super(context, attrs, defStyle, privateBrowsing);
         init();
+    }
+    
+    public void onPause()
+    {
+        appCode.pluginManager.onPause(true);
+    }
+    
+    public void onResume()
+    {
+        appCode.pluginManager.onResume(true);
+    }
+    
+    public void sendJavascript(String command)
+    {
+        appCode.sendJavascript(command);
     }
     
     public void onDestroy()
@@ -206,5 +222,10 @@ public class CordovaView extends WebView {
             }
         }
         return false;
+    }
+
+    public PluginManager getPluginManager() {
+        // TODO Auto-generated method stub
+        return appCode.pluginManager;
     }
 }

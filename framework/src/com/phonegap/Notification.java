@@ -21,7 +21,7 @@ package com.phonegap;
 import org.json.JSONArray;
 import org.json.JSONException;
 import com.phonegap.api.Plugin;
-import com.phonegap.api.PhonegapActivity;
+import com.phonegap.api.CordovaInterface;
 import com.phonegap.api.PluginResult;
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
@@ -184,7 +184,7 @@ public class Notification extends Plugin {
 	 */
 	public synchronized void alert(final String message, final String title, final String buttonLabel, final String callbackId) {
 
-		final PhonegapActivity ctx = this.ctx;
+		final CordovaInterface ctx = this.ctx;
 		final Notification notification = this;
 		
 		Runnable runnable = new Runnable() {
@@ -220,7 +220,7 @@ public class Notification extends Plugin {
 	 */
 	public synchronized void confirm(final String message, final String title, String buttonLabels, final String callbackId) {
 
-		final PhonegapActivity ctx = this.ctx;
+		final CordovaInterface ctx = this.ctx;
 		final Notification notification = this;
 		final String[] fButtons = buttonLabels.split(",");
 
@@ -284,7 +284,7 @@ public class Notification extends Plugin {
 			this.spinnerDialog = null;
 		}
 		final Notification notification = this;
-		final PhonegapActivity ctx = this.ctx;
+		final CordovaInterface ctx = this.ctx;
 		Runnable runnable = new Runnable() {
 			public void run() {
 				notification.spinnerDialog = ProgressDialog.show(ctx.getContext(), title , message, true, true, 
@@ -320,7 +320,7 @@ public class Notification extends Plugin {
 			this.progressDialog = null;
 		}
 		final Notification notification = this;
-		final PhonegapActivity ctx = this.ctx;
+		final CordovaInterface ctx = this.ctx;
 		Runnable runnable = new Runnable() {
 			public void run() {
 				notification.progressDialog = new ProgressDialog(ctx.getContext());

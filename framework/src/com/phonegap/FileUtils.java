@@ -36,7 +36,7 @@ import android.provider.MediaStore;
 import android.util.Log;
 import android.webkit.MimeTypeMap;
 
-import com.phonegap.api.PhonegapActivity;
+import com.phonegap.api.CordovaInterface;
 import com.phonegap.api.Plugin;
 import com.phonegap.api.PluginResult;
 import com.phonegap.file.EncodingException;
@@ -1021,7 +1021,7 @@ public class FileUtils extends Plugin {
      * @param ctx the current applicaiton context
      * @return the full path to the file
      */
-    protected static String getRealPathFromURI(Uri contentUri, PhonegapActivity ctx) {
+    protected static String getRealPathFromURI(Uri contentUri, CordovaInterface ctx) {
         String[] proj = { _DATA };
         Cursor cursor = ctx.managedQuery(contentUri, proj, null, null, null);
         int column_index = cursor.getColumnIndexOrThrow(_DATA);

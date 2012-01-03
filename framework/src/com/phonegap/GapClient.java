@@ -5,7 +5,7 @@ import org.json.JSONException;
 
 import com.phonegap.api.IPlugin;
 import com.phonegap.api.LOG;
-import com.phonegap.api.PhonegapActivity;
+import com.phonegap.api.CordovaInterface;
 import com.phonegap.api.PluginManager;
 
 import android.app.Activity;
@@ -31,7 +31,7 @@ import android.webkit.WebView;
 import android.webkit.GeolocationPermissions.Callback;
 import android.widget.EditText;
 
-public class GapClient extends WebChromeClient implements PhonegapActivity {
+public class GapClient extends WebChromeClient implements CordovaInterface {
     private String TAG = "PhoneGapLog";
     private long MAX_QUOTA = 100 * 1024 * 1024;
     Activity mCtx;

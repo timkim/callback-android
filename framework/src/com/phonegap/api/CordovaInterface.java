@@ -35,7 +35,7 @@ import android.net.Uri;
  * The Phonegap activity abstract class that is extended by DroidGap.
  * It is used to isolate plugin development, and remove dependency on entire Phonegap library.
  */
-public interface PhonegapActivity {
+public interface CordovaInterface {
 
     /**
      * Send JavaScript statement back to JavaScript.
