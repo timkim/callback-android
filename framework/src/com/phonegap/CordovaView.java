@@ -338,4 +338,8 @@ public class CordovaView extends WebView {
     public void cancelLoadUrl() {
         // TODO Auto-generated method stub
     }
+
+    public void postMessage(String id, Object data) {
+        appCode.pluginManager.postMessage(id, data);
+    }
 }

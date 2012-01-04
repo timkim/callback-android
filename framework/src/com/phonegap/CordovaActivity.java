@@ -7,6 +7,8 @@ import android.graphics.Color;
 import android.os.Bundle;
 import android.view.Display;
 import android.view.KeyEvent;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
@@ -127,5 +129,39 @@ public class CordovaActivity extends Activity {
          }
 
          return false;
+     }
+     
+
+     private void postMessage(String id, Object data) {
+         // Forward to plugins
+         this.appView.postMessage(id, data);
+     }
+
+     
+     /* 
+      * Hook in DroidGap for menu plugins
+      * 
+      */
+     
+     @Override
+     public boolean onCreateOptionsMenu(Menu menu)
+     {
+         this.postMessage("onCreateOptionsMenu", menu);
+         return super.onCreateOptionsMenu(menu);
+     }
+     
+     
+    @Override
+     public boolean onPrepareOptionsMenu(Menu menu)
+     {
+         this.postMessage("onPrepareOptionsMenu", menu);
+         return super.onPrepareOptionsMenu(menu);
+     }
+     
+     @Override
+     public boolean onOptionsItemSelected(MenuItem item)
+     {
+         this.postMessage("onOptionsItemSelected", item);
+         return true;
      }
 }
