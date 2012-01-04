@@ -6,11 +6,13 @@ import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.view.Display;
+import android.view.KeyEvent;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.LinearLayout;
 import com.phonegap.LinearLayoutSoftKeyboardDetect;
+import com.phonegap.api.IPlugin;
 import com.phonegap.api.PluginManager;
 
 public class CordovaActivity extends Activity {
@@ -18,13 +20,7 @@ public class CordovaActivity extends Activity {
     CordovaView appView;
     private LinearLayoutSoftKeyboardDetect root;
     private int backgroundColor = Color.BLACK;
-    PluginManager pluginManager;
-    private boolean keepRunning;
-    
-    private static int ACTIVITY_STARTING = 0;
-    private static int ACTIVITY_RUNNING = 1;
-    private static int ACTIVITY_EXITING = 2;
-    private int activityState = 0;
+    private IPlugin activityResultCallback;
     
     @Override
     public void onCreate(Bundle savedInstanceState)
@@ -44,53 +40,42 @@ public class CordovaActivity extends Activity {
         root.setBackgroundColor(this.backgroundColor);
         root.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.FILL_PARENT, 
                 ViewGroup.LayoutParams.FILL_PARENT, 0.0F));
+        
+        appView = new CordovaView(this);
 
-        root.addView(this.appView);
+        root.addView(appView);
         setContentView(root);
-        pluginManager = appView.getPluginManager();
+    }
+
+    //When the app is destroyed
+    public void onDestroy()
+    {
+        super.onDestroy();
+        appView.onDestroy();
     }
     
-    @Override
-    protected void onPause()
+    public void loadUrl(String url)
     {
-        super.onPause();
-
-        // Don't process pause if shutting down, since onDestroy() will be called
-        if (this.activityState == ACTIVITY_EXITING) {
-            return;
-        }
-
-        if (this.appView == null) {
-            return;
-        }
-
-        // Send pause event to JavaScript
-        this.appView.loadUrl("javascript:try{PhoneGap.fireDocumentEvent('pause');}catch(e){};");
-
-        // Forward to plugins
-        this.pluginManager.onPause(this.keepRunning);
-
-        // If app doesn't want to run in background
-        if (!this.keepRunning) {
-            // Pause JavaScript timers (including setInterval)
-            this.appView.pauseTimers();
-        }
+        appView.loadUrl(url);
     }
     
     @Override
     /**
-     * Called when the activity receives a new intent
-     **/
-    protected void onNewIntent(Intent intent) {
-        super.onNewIntent(intent);
+     * Called when an activity you launched exits, giving you the requestCode you started it with,
+     * the resultCode it returned, and any additional data from it. 
+     * 
+     * @param requestCode       The request code originally supplied to startActivityForResult(), 
+     *                          allowing you to identify who this result came from.
+     * @param resultCode        The integer result code returned by the child activity through its setResult().
+     * @param data              An Intent, which can return result data to the caller (various data can be attached to Intent "extras").
+     */
+     protected void onActivityResult(int requestCode, int resultCode, Intent intent) {
+         super.onActivityResult(requestCode, resultCode, intent);
+         appView.appCode.onPluginResult(requestCode, resultCode, intent);
+     }
 
-        //Forward to plugins
-        this.pluginManager.onNewIntent(intent);
-    }
+     public void setActivityResultCallback(IPlugin plugin) {
+         this.activityResultCallback = plugin;
+     }
 
-    protected void onResume()
-    {
-        super.onResume();
-    }
-    
 }

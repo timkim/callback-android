@@ -39,7 +39,7 @@ public class GapClient extends WebChromeClient implements CordovaInterface {
     CallbackServer callbackServer;
     WebView appView;
     private IPlugin activityResultCallback;
-    private Object activityResultKeepRunning;
+    private boolean activityResultKeepRunning;
     private boolean keepRunning;
 
     public GapClient(WebView view, Context ctx)
@@ -325,13 +325,22 @@ public class GapClient extends WebChromeClient implements CordovaInterface {
         }
         
         // Start activity
-        mCtx.startActivityForResult(intent, requestCode);    }
+        mCtx.startActivityForResult(intent, requestCode);    
+    }
 
     public void setActivityResultCallback(IPlugin plugin) {
         // TODO Auto-generated method stub
         
     }
-
+    
+    public void onPluginResult(int requestCode, int resultCode, Intent intent)
+    {
+        IPlugin callback = this.activityResultCallback;
+        if (callback != null) {
+            callback.onActivityResult(requestCode, resultCode, intent);
+        }
+    }
+    
     public void loadUrl(String url) {
         appView.loadUrl(url);
     }
@@ -379,7 +388,6 @@ public class GapClient extends WebChromeClient implements CordovaInterface {
 
     public Cursor managedQuery(Uri uri, String[] projection, String selection,
             String[] selectionArgs, String sortOrder) {
-        // TODO Auto-generated method stub
         return mCtx.managedQuery(uri, projection, selection, selectionArgs, sortOrder);
     }
 
@@ -393,9 +401,10 @@ public class GapClient extends WebChromeClient implements CordovaInterface {
         return mCtx.getAssets();
     }
 
-    public Cursor managedQuery(Uri parse, String[] strings, Object object,
+    public Cursor managedQuery(Uri uri, String[] projection, Object object,
             Object object2, Object object3) {
         // TODO Auto-generated method stub
-        return null;
+        return mCtx.managedQuery(uri, projection, null, null, null);
     }
+
 }
