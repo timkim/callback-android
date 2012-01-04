@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Stack;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -14,7 +15,9 @@ import com.phonegap.api.PluginManager;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
 import android.content.res.XmlResourceParser;
+import android.net.Uri;
 import android.util.AttributeSet;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
@@ -30,6 +33,8 @@ public class CordovaView extends WebView {
     private boolean classicRender;
     private ArrayList<Pattern> whiteList = new ArrayList<Pattern>();
     private HashMap<String, Boolean> whiteListCache = new HashMap<String,Boolean>();
+    String url = null;
+    Stack<String> urls = new Stack<String>();
 
     
     public CordovaView(Context context)
@@ -227,5 +232,110 @@ public class CordovaView extends WebView {
     public PluginManager getPluginManager() {
         // TODO Auto-generated method stub
         return appCode.pluginManager;
+    }
+    
+    /**
+     * Go to previous page in history.  (We manage our own history)
+     * 
+     * @return true if we went back, false if we are already at top
+     */
+    public boolean backHistory() {
+
+        // Check webview first to see if there is a history
+        // This is needed to support curPage#diffLink, since they are added to appView's history, but not our history url array (JQMobile behavior)
+        if (this.canGoBack()) {
+            this.goBack();  
+            return true;
+        }
+
+        // If our managed history has prev url
+        if (this.urls.size() > 1) {
+            this.urls.pop();                // Pop current url
+            String url = this.urls.pop();   // Pop prev url that we want to load, since it will be added back by loadUrl()
+            this.loadUrl(url);
+            return true;
+        }
+        
+        return false;
+    }
+
+    public boolean checkBackKey() {
+        // TODO Auto-generated method stub
+        return appCode.isBackButtonBound();
+    }
+    
+    @Override
+    public void clearHistory()
+    {
+        super.clearHistory();
+        this.urls.clear();
+        
+        // Leave current url on history stack
+        if (this.url != null) {
+            this.urls.push(this.url);
+        }
+    }
+    
+
+    /**
+     * Load the specified URL in the PhoneGap webview or a new browser instance.
+     * 
+     * NOTE: If openExternal is false, only URLs listed in whitelist can be loaded.
+     *
+     * @param url           The url to load.
+     * @param openExternal  Load url in browser instead of PhoneGap webview.
+     * @param clearHistory  Clear the history stack, so new page becomes top of history
+     * @param params        DroidGap parameters for new app
+     */
+    public void showWebPage(String url, boolean openExternal, boolean clearHistory, HashMap<String, Object> params) { //throws android.content.ActivityNotFoundException {
+        LOG.d(TAG, "showWebPage(%s, %b, %b, HashMap", url, openExternal, clearHistory);
+        
+        // If clearing history
+        if (clearHistory) {
+            this.clearHistory();
+        }
+        
+        // If loading into our webview
+        if (!openExternal) {
+            
+            // Make sure url is in whitelist
+            if (url.startsWith("file://") || isUrlWhiteListed(url)) {
+                // TODO: What about params?
+                
+                // Clear out current url from history, since it will be replacing it
+                if (clearHistory) {
+                    this.urls.clear();
+                }
+                
+                // Load new URL
+                this.loadUrl(url);
+            }
+            // Load in default viewer if not
+            else {
+                LOG.w(TAG, "showWebPage: Cannot load URL into webview since it is not in white list.  Loading into browser instead. (URL="+url+")");
+                try {
+                    Intent intent = new Intent(Intent.ACTION_VIEW);
+                    intent.setData(Uri.parse(url));
+                    app.startActivity(intent);
+                } catch (android.content.ActivityNotFoundException e) {
+                    LOG.e(TAG, "Error loading url "+url, e);
+                }
+            }
+        }
+        
+        // Load in default view intent
+        else {
+            try {
+                Intent intent = new Intent(Intent.ACTION_VIEW);
+                intent.setData(Uri.parse(url));
+                app.startActivity(intent);
+            } catch (android.content.ActivityNotFoundException e) {
+                LOG.e(TAG, "Error loading url "+url, e);
+            }
+        }
+    }
+
+    public void cancelLoadUrl() {
+        // TODO Auto-generated method stub
     }
 }

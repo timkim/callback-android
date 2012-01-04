@@ -1,5 +1,7 @@
 package com.phonegap;
 
+import java.util.HashMap;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 
@@ -37,12 +39,13 @@ public class GapClient extends WebChromeClient implements CordovaInterface {
     Activity mCtx;
     PluginManager pluginManager;
     CallbackServer callbackServer;
-    WebView appView;
+    CordovaView appView;
     private IPlugin activityResultCallback;
     private boolean activityResultKeepRunning;
     private boolean keepRunning;
+    private boolean bound;
 
-    public GapClient(WebView view, Context ctx)
+    public GapClient(CordovaView view, Context ctx)
     {
         mCtx = (Activity) ctx;
         callbackServer = new CallbackServer();
@@ -55,6 +58,7 @@ public class GapClient extends WebChromeClient implements CordovaInterface {
     {
         pluginManager.onDestroy();
     }
+    
     /**
      * Tell the client to display a javascript alert dialog.
      * 
@@ -405,6 +409,40 @@ public class GapClient extends WebChromeClient implements CordovaInterface {
             Object object2, Object object3) {
         // TODO Auto-generated method stub
         return mCtx.managedQuery(uri, projection, null, null, null);
+    }
+
+    public void clearCache() {
+        //This should always exist!
+        appView.clearCache(true);
+    }
+
+    public void clearHistory() {
+    }
+    
+    public boolean backHistory() {
+        return appView.backHistory();
+    }
+
+    public void addWhiteListEntry(String origin, boolean subdomains) {
+        appView.addWhiteListEntry(origin, subdomains);
+    }
+
+    public void bindBackButton() {
+        this.bound = true;
+    }
+
+    public boolean isBackButtonBound() {
+        // TODO Auto-generated method stub
+        return this.bound;
+    }
+
+    public void cancelLoadUrl() {
+        this.appView.cancelLoadUrl();
+    }
+
+    public void showWebPage(String url, boolean openExternal,
+            boolean clearHistory, HashMap<String, Object> params) {
+        this.appView.showWebPage(url, openExternal, clearHistory, params);
     }
 
 }

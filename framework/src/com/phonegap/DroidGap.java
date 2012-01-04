@@ -1805,4 +1805,14 @@ public class DroidGap extends Activity implements CordovaInterface {
     public Context getContext() {
         return this;
     }
+
+    public void bindBackButton() {
+        // TODO Auto-generated method stub
+        
+    }
+
+    public boolean isBackButtonBound() {
+        // TODO Auto-generated method stub
+        return false;
+    }
 }

@@ -77,5 +77,55 @@ public class CordovaActivity extends Activity {
      public void setActivityResultCallback(IPlugin plugin) {
          this.activityResultCallback = plugin;
      }
+     
+     /**
+      * Called when a key is pressed.
+      * 
+      * @param keyCode
+      * @param event
+      */
+     @Override
+     public boolean onKeyDown(int keyCode, KeyEvent event) {
+         if (this.appView == null) {
+             return super.onKeyDown(keyCode, event);
+         }
 
+         // If back key
+         if (keyCode == KeyEvent.KEYCODE_BACK) {
+
+             // If back key is bound, then send event to JavaScript
+             if (this.appView.checkBackKey()) {
+                 this.appView.loadUrl("javascript:PhoneGap.fireDocumentEvent('backbutton');");
+                 return true;
+             }
+
+             // If not bound
+             else {
+
+                 // Go to previous page in webview if it is possible to go back
+                 if (this.appView.backHistory()) {
+                     return true;
+                 }
+                 // If not, then invoke behavior of super class
+                 else {
+                     //this.activityState = ACTIVITY_EXITING;
+                     return super.onKeyDown(keyCode, event);
+                 }
+             }
+         }
+
+         // If menu key
+         else if (keyCode == KeyEvent.KEYCODE_MENU) {
+             this.appView.loadUrl("javascript:PhoneGap.fireDocumentEvent('menubutton');");
+             return super.onKeyDown(keyCode, event);
+         }
+
+         // If search key
+         else if (keyCode == KeyEvent.KEYCODE_SEARCH) {
+             this.appView.loadUrl("javascript:PhoneGap.fireDocumentEvent('searchbutton');");
+             return true;
+         }
+
+         return false;
+     }
 }

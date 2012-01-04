@@ -18,6 +18,8 @@
 */
 package com.phonegap.api;
 
+import java.util.HashMap;
+
 import android.app.Activity;
 import android.app.Service;
 import android.content.BroadcastReceiver;
@@ -99,5 +101,22 @@ public interface CordovaInterface {
     public abstract void runOnUiThread(Runnable runnable);
 
     public abstract AssetManager getAssets();
+
+    public abstract void clearCache();
+
+    public abstract void clearHistory();
+
+    public abstract boolean backHistory();
+
+    public abstract void addWhiteListEntry(String origin, boolean subdomains);
+
+    public abstract void bindBackButton();
+
+    public abstract boolean isBackButtonBound();
+
+    public abstract void cancelLoadUrl();
+
+    public abstract void showWebPage(String url, boolean openExternal,
+            boolean clearHistory, HashMap<String, Object> params);
 
 }

@@ -22,6 +22,9 @@ package com.phonegap;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import android.app.Activity;
+
 import com.phonegap.api.LOG;
 import com.phonegap.api.Plugin;
 import com.phonegap.api.PluginResult;
@@ -87,7 +90,8 @@ public class App extends Plugin {
 	 * Clear the resource cache.
 	 */
 	public void clearCache() {
-		((DroidGap)this.ctx).clearCache();
+	    //((DroidGap)this.ctx).clearCache();
+	    this.ctx.clearCache();
 	}
 	
 	/**
@@ -147,21 +151,22 @@ public class App extends Plugin {
 				e.printStackTrace();
 			}
 		}
-		((DroidGap)this.ctx).showWebPage(url, openExternal, clearHistory, params);
+		this.ctx.showWebPage(url, openExternal, clearHistory, params);
 	}
 
+	
 	/**
 	 * Cancel loadUrl before it has been loaded.
 	 */
 	public void cancelLoadUrl() {
-		((DroidGap)this.ctx).cancelLoadUrl();
+		this.ctx.cancelLoadUrl();
 	}
 	
     /**
      * Clear page history for the app.
      */
     public void clearHistory() {
-    	((DroidGap)this.ctx).clearHistory();
+    	this.ctx.clearHistory();
     }
     
     /**
@@ -169,7 +174,7 @@ public class App extends Plugin {
      * This is the same as pressing the backbutton on Android device.
      */
     public void backHistory() {
-        ((DroidGap)this.ctx).backHistory();
+        this.ctx.backHistory();
     }
 
     /**
@@ -180,7 +185,7 @@ public class App extends Plugin {
      */
     public void overrideBackbutton(boolean override) {
     	LOG.i("DroidGap", "WARNING: Back Button Default Behaviour will be overridden.  The backbutton event will be fired!");
-    	((DroidGap)this.ctx).bound = override;
+    	this.ctx.bindBackButton();
     }
 
     /**
@@ -189,14 +194,15 @@ public class App extends Plugin {
      * @return boolean
      */
     public boolean isBackbuttonOverridden() {
-    	return ((DroidGap)this.ctx).bound;
+    	return this.ctx.isBackButtonBound();
     }
 
     /**
      * Exit the Android application.
      */
     public void exitApp() {
-    	((DroidGap)this.ctx).endActivity();
+    	Activity app = (Activity) this.ctx.getContext();
+    	app.finish();
     }
 
     /**
@@ -206,6 +212,6 @@ public class App extends Plugin {
      * @param subdomains	T=include all subdomains under origin
      */
     public void addWhiteListEntry(String origin, boolean subdomains) {
-    	((DroidGap)this.ctx).addWhiteListEntry(origin, subdomains);
+    	this.ctx.addWhiteListEntry(origin, subdomains);
     }
 }
