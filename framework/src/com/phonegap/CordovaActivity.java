@@ -22,7 +22,13 @@ public class CordovaActivity extends Activity {
     CordovaView appView;
     private LinearLayoutSoftKeyboardDetect root;
     private int backgroundColor = Color.BLACK;
-    private IPlugin activityResultCallback;
+    private static int ACTIVITY_STARTING = 0;
+    private static int ACTIVITY_RUNNING = 1;
+    private static int ACTIVITY_EXITING = 2;
+    private int activityState = 0;  // 0=starting, 1=running (after 1st resume), 2=shutting down
+    private boolean keepRunning;
+    private boolean activityResultKeepRunning;
+    private PluginManager pluginManager;
     
     @Override
     public void onCreate(Bundle savedInstanceState)
@@ -46,14 +52,102 @@ public class CordovaActivity extends Activity {
         appView = new CordovaView(this);
 
         root.addView(appView);
+        pluginManager = appView.appCode.pluginManager;
         setContentView(root);
     }
+    
 
-    //When the app is destroyed
-    public void onDestroy()
-    {
+    @Override
+    /**
+     * Called when the system is about to start resuming a previous activity. 
+     */
+    protected void onPause() {
+        super.onPause();
+        
+        // Don't process pause if shutting down, since onDestroy() will be called
+        if (this.activityState == ACTIVITY_EXITING) {
+            return;
+        }
+
+        if (this.appView == null) {
+            return;
+        }
+
+        // Send pause event to JavaScript
+        this.appView.loadUrl("javascript:try{PhoneGap.fireDocumentEvent('pause');}catch(e){};");
+
+        // Forward to plugins
+        this.pluginManager.onPause(this.keepRunning);
+
+        // If app doesn't want to run in background
+        if (!this.keepRunning) {
+            // Pause JavaScript timers (including setInterval)
+            this.appView.pauseTimers();
+        }
+    }
+
+    public void endActivity() {
+        this.activityState = ACTIVITY_EXITING;
+        this.finish();
+    }
+    
+    @Override
+    /**
+     * Called when the activity will start interacting with the user. 
+     */
+    protected void onResume() {
+        super.onResume();
+        
+        if (this.activityState == ACTIVITY_STARTING) {
+            this.activityState = ACTIVITY_RUNNING;
+            return;
+        }
+
+        if (this.appView == null) {
+            return;
+        }
+
+        // Send resume event to JavaScript
+        this.appView.loadUrl("javascript:try{PhoneGap.fireDocumentEvent('resume');}catch(e){};");
+
+        // Forward to plugins
+        this.pluginManager.onResume(this.keepRunning || this.activityResultKeepRunning);
+
+        // If app doesn't want to run in background
+        if (!this.keepRunning || this.activityResultKeepRunning) {
+
+            // Restore multitasking state
+            if (this.activityResultKeepRunning) {
+                this.keepRunning = this.activityResultKeepRunning;
+                this.activityResultKeepRunning = false;
+            }
+
+            // Resume JavaScript timers (including setInterval)
+            this.appView.resumeTimers();
+        }
+    }
+    
+
+    @Override
+    /**
+     * The final call you receive before your activity is destroyed. 
+     */
+    public void onDestroy() {
         super.onDestroy();
-        appView.onDestroy();
+        
+        if (this.appView != null) {
+            // Send destroy event to JavaScript
+            this.appView.loadUrl("javascript:try{PhoneGap.onDestroy.fire();}catch(e){};");
+
+            // Load blank page so that JavaScript onunload is called
+            this.appView.loadUrl("about:blank");
+
+            // Forward to plugins
+            this.pluginManager.onDestroy();
+        }
+        else {
+            this.endActivity();
+        }
     }
     
     public void loadUrl(String url)
@@ -74,10 +168,6 @@ public class CordovaActivity extends Activity {
      protected void onActivityResult(int requestCode, int resultCode, Intent intent) {
          super.onActivityResult(requestCode, resultCode, intent);
          appView.appCode.onPluginResult(requestCode, resultCode, intent);
-     }
-
-     public void setActivityResultCallback(IPlugin plugin) {
-         this.activityResultCallback = plugin;
      }
      
      /**
@@ -110,7 +200,7 @@ public class CordovaActivity extends Activity {
                  }
                  // If not, then invoke behavior of super class
                  else {
-                     //this.activityState = ACTIVITY_EXITING;
+                     this.activityState = ACTIVITY_EXITING;
                      return super.onKeyDown(keyCode, event);
                  }
              }
@@ -136,6 +226,7 @@ public class CordovaActivity extends Activity {
          // Forward to plugins
          this.appView.postMessage(id, data);
      }
+     
 
      
      /* 
